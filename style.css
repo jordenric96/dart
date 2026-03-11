@@ -28,7 +28,7 @@ h1, h2, h3, h4 {
     text-align: center;
 }
 
-/* Kaders voor de header, statische info en dynamische kaarten */
+/* Kaders */
 .retro-header, .info-item, .card {
     background-color: var(--accent-color);
     border: 5px solid var(--border-color);
@@ -42,13 +42,11 @@ h1, h2, h3, h4 {
     text-align: center;
 }
 
-/* Header specifiek */
 .retro-header { padding: 30px 15px; margin-bottom: 30px; }
 .retro-header .title-small { font-size: 1.5em; margin-bottom: 0; }
 .retro-header .title-large { font-size: clamp(1.2rem, 8vw, 2.5rem); margin: 10px 0; line-height: 1.1; }
 .retro-header h3 { font-size: 1.2em; margin-top: 0; }
 
-/* Info Board specifiek */
 .info-board {
     width: 100%;
     display: flex;
@@ -63,7 +61,6 @@ h1, h2, h3, h4 {
     margin-right: 5px;
 }
 
-/* App container */
 #app-container {
     width: 100%;
     display: flex;
@@ -95,7 +92,19 @@ h1, h2, h3, h4 {
     font-size: 0.9em;
 }
 
-/* Checkboxes voor aanwezigen */
+/* Icoon knoppen voor Bevestigen en Slotjes */
+.icon-btn {
+    background: #fff;
+    border: 3px solid var(--border-color);
+    border-radius: 5px;
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 5px;
+    margin-left: 5px;
+    transition: 0.2s;
+}
+.icon-btn:hover { background: #eee; }
+
 .player-checkboxes {
     display: flex;
     flex-wrap: wrap;
@@ -112,7 +121,7 @@ h1, h2, h3, h4 {
     cursor: pointer;
 }
 
-/* --- VERNIEUWDE TABELLEN --- */
+/* Tabellen */
 .retro-table {
     width: 100%;
     border-collapse: collapse;
@@ -130,14 +139,13 @@ h1, h2, h3, h4 {
     font-family: 'Alfa Slab One', serif;
     font-size: 0.8em;
 }
-/* Laat de kolom met Punten extra opvallen */
 .punten-cel {
     font-weight: bold;
     font-size: 1.2em;
     background-color: #eee;
 }
 
-/* --- VERNIEUWDE WEDSTRIJDEN --- */
+/* Wedstrijden */
 .match-row {
     display: flex;
     justify-content: center;
@@ -145,24 +153,20 @@ h1, h2, h3, h4 {
     border-bottom: 2px dashed #ccc;
     padding: 10px 0;
     font-size: 1.2em;
-    gap: 10px; /* Zorgt voor vaste ruimte tussen de blokken */
+    gap: 10px;
 }
 .match-player {
-    flex: 1; /* Zorgt dat beide namen evenveel ruimte krijgen */
+    flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.match-player.speler1 {
-    text-align: right; /* Linker naam naar rechts uitlijnen */
-}
-.match-player.speler2 {
-    text-align: left; /* Rechter naam naar links uitlijnen */
-}
+.match-player.speler1 { text-align: right; }
+.match-player.speler2 { text-align: left; }
 .match-inputs {
     display: flex;
     align-items: center;
     gap: 5px;
-    flex-shrink: 0; /* Voorkomt dat het scorevakje in elkaar gedrukt wordt */
+    flex-shrink: 0;
 }
 .score-input {
     width: 35px;
@@ -173,24 +177,13 @@ h1, h2, h3, h4 {
     border: 3px solid var(--border-color);
     border-radius: 5px;
 }
-
-/* Loting Animatie */
-.draw-reveal {
-    font-size: 2em;
+.locked-score {
     font-family: 'Alfa Slab One', serif;
-    animation: popIn 0.5s ease-out forwards;
-    opacity: 0;
-    margin: 10px 0;
-}
-@keyframes popIn {
-    0% { transform: scale(0.5); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
+    font-size: 1.4em;
+    padding: 0 10px;
 }
 
-footer { text-align: center; font-family: 'Alfa Slab One', serif; margin-top: 40px; padding: 20px; font-size: 0.8em; color: #555; }
-
-
-/* --- EXTRA VOOR DE CHAMPIONS LEAGUE LOTING --- */
+/* Loting */
 .draw-reveal-big {
     margin: 20px 0; 
     padding: 30px 20px; 
@@ -200,7 +193,6 @@ footer { text-align: center; font-family: 'Alfa Slab One', serif; margin-top: 40
     box-shadow: 6px 6px 0px 0px var(--border-color);
     animation: bounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
-
 .draw-reveal-big h1 { font-size: 3em; margin: 10px 0; color: #111; }
 .draw-reveal-big h2 { margin: 0; background-color: var(--border-color); color: #fff; display: inline-block; padding: 5px 15px; border-radius: 5px;}
 
@@ -234,3 +226,5 @@ footer { text-align: center; font-family: 'Alfa Slab One', serif; margin-top: 40
 .poule-list ul { list-style: none; padding: 0; font-size: 1.4em; margin: 0; }
 .poule-list li { border-bottom: 2px dashed #ccc; padding: 5px 0; }
 .poule-list li:last-child { border-bottom: none; }
+
+footer { text-align: center; font-family: 'Alfa Slab One', serif; margin-top: 40px; padding: 20px; font-size: 0.8em; color: #555; }

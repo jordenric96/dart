@@ -112,16 +112,16 @@ h1, h2, h3, h4 {
     cursor: pointer;
 }
 
-/* Tabellen voor standen */
+/* --- VERNIEUWDE TABELLEN --- */
 .retro-table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 20px;
-    font-size: 1.2em;
+    margin-bottom: 25px;
+    font-size: 1.1em;
 }
 .retro-table th, .retro-table td {
-    border: 3px solid var(--border-color);
-    padding: 8px;
+    border: 2px solid var(--border-color);
+    padding: 6px 2px;
     text-align: center;
 }
 .retro-table th {
@@ -130,26 +130,45 @@ h1, h2, h3, h4 {
     font-family: 'Alfa Slab One', serif;
     font-size: 0.8em;
 }
+/* Laat de kolom met Punten extra opvallen */
+.punten-cel {
+    font-weight: bold;
+    font-size: 1.2em;
+    background-color: #eee;
+}
 
-/* Wedstrijden */
+/* --- VERNIEUWDE WEDSTRIJDEN --- */
 .match-row {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     border-bottom: 2px dashed #ccc;
     padding: 10px 0;
-    font-size: 1.3em;
+    font-size: 1.2em;
+    gap: 10px; /* Zorgt voor vaste ruimte tussen de blokken */
+}
+.match-player {
+    flex: 1; /* Zorgt dat beide namen evenveel ruimte krijgen */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.match-player.speler1 {
+    text-align: right; /* Linker naam naar rechts uitlijnen */
+}
+.match-player.speler2 {
+    text-align: left; /* Rechter naam naar links uitlijnen */
 }
 .match-inputs {
     display: flex;
     align-items: center;
     gap: 5px;
+    flex-shrink: 0; /* Voorkomt dat het scorevakje in elkaar gedrukt wordt */
 }
 .score-input {
-    width: 40px;
-    height: 40px;
+    width: 35px;
+    height: 35px;
     font-family: 'Alfa Slab One', serif;
-    font-size: 1.2em;
+    font-size: 1.1em;
     text-align: center;
     border: 3px solid var(--border-color);
     border-radius: 5px;

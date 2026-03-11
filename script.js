@@ -3,7 +3,7 @@ const alleSpelers = ["Jorden", "Yarni", "Joël", "Vince", "Jessy", "Stefaan", "W
 
 // State van de app
 let state = {
-    fase: 'setup', // setup, loting, poules, knockouts
+    fase: 'setup', 
     poules: { A: [], B: [] },
     matches: [],
     standings: { A: [], B: [] }
@@ -55,7 +55,6 @@ function renderSetup() {
     `;
     
     alleSpelers.forEach(speler => {
-        // Vink standaard de eerste 7 aan (de bevestigde spelers)
         let checked = ["Jorden", "Yarni", "Joël", "Vince", "Jessy", "Stefaan", "Wim"].includes(speler) ? "checked" : "";
         html += `<label><input type="checkbox" class="speler-check" value="${speler}" ${checked}> ${speler}</label>`;
     });
@@ -79,13 +78,11 @@ function renderSetup() {
 
 // 2. DE LOTING
 function voerLotingUit(spelers) {
-    // Schud de array willekeurig (Fisher-Yates shuffle)
     for (let i = spelers.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [spelers[i], spelers[j]] = [spelers[j], spelers[i]];
     }
 
-    // Verdeel over poule A en B
     const helft = Math.ceil(spelers.length / 2);
     state.poules.A = spelers.slice(0, helft);
     state.poules.B = spelers.slice(helft);
@@ -148,16 +145,16 @@ function renderPoules() {
             <div class="card">
                 <h2>Poule ${poule} - Stand</h2>
                 <table class="retro-table">
-                    <tr><th>Naam</th><th>Gespeeld</th><th>W</th><th>G</th><th>V</th><th>Punten</th><th>Legs V-T</th></tr>
+                    <tr><th>Naam</th><th>#</th><th>W</th><th>G</th><th>V</th><th>PT</th><th>Legs</th></tr>
                     ${state.standings[poule].map(s => `
                         <tr>
-                            <td><strong>${s.naam}</strong></td>
+                            <td style="text-align: left;"><strong>${s.naam}</strong></td>
                             <td>${s.gespeeld}</td>
                             <td>${s.winst}</td>
                             <td>${s.gelijk}</td>
                             <td>${s.verlies}</td>
-                            <td><strong>${s.punten}</strong></td>
-                            <td>${s.legsVoor} - ${s.legsTegen}</td>
+                            <td class="punten-cel">${s.punten}</td>
+                            <td>${s.legsVoor}-${s.legsTegen}</td>
                         </tr>
                     `).join('')}
                 </table>
@@ -165,20 +162,19 @@ function renderPoules() {
                 <h3>Wedstrijden (Tot 4, of 3-3)</h3>
                 ${state.matches.filter(m => m.poule === poule).map(m => `
                     <div class="match-row">
-                        <span>${m.speler1}</span>
+                        <span class="match-player speler1">${m.speler1}</span>
                         <div class="match-inputs">
                             <input type="number" min="0" max="4" class="score-input" data-id="${m.id}" data-speler="1" value="${m.score1 !== null ? m.score1 : ''}">
                             -
                             <input type="number" min="0" max="4" class="score-input" data-id="${m.id}" data-speler="2" value="${m.score2 !== null ? m.score2 : ''}">
                         </div>
-                        <span>${m.speler2}</span>
+                        <span class="match-player speler2">${m.speler2}</span>
                     </div>
                 `).join('')}
             </div>
         `;
     });
 
-    // Check of alle wedstrijden gespeeld zijn
     const alleGespeeld = state.matches.every(m => m.gespeeld);
     if (alleGespeeld) {
         html += `<div class="card"><button id="naar-knockouts-btn" class="retro-button">🏆 Sluit Poules & Start Halve Finales!</button></div>`;
@@ -186,7 +182,6 @@ function renderPoules() {
 
     appContainer.innerHTML = html;
 
-    // Event listeners voor score input
     document.querySelectorAll('.score-input').forEach(input => {
         input.addEventListener('change', (e) => handleScoreChange(e.target));
     });
@@ -208,7 +203,6 @@ function handleScoreChange(input) {
     if (spelerNummer === '1') match.score1 = waarde;
     else match.score2 = waarde;
 
-    // Valideer of wedstrijd af is
     match.gespeeld = (match.score1 !== null && match.score2 !== null);
     
     berekenStanden();
@@ -217,13 +211,11 @@ function handleScoreChange(input) {
 
 function berekenStanden() {
     ['A', 'B'].forEach(poule => {
-        // Reset standen
         let stats = {};
         state.poules[poule].forEach(speler => {
             stats[speler] = { naam: speler, gespeeld: 0, winst: 0, gelijk: 0, verlies: 0, punten: 0, legsVoor: 0, legsTegen: 0, saldo: 0 };
         });
 
-        // Vul standen in
         state.matches.filter(m => m.poule === poule && m.gespeeld).forEach(m => {
             let s1 = stats[m.speler1];
             let s2 = stats[m.speler2];
@@ -237,7 +229,6 @@ function berekenStanden() {
             else { s1.gelijk++; s2.gelijk++; s1.punten += 1; s2.punten += 1; }
         });
 
-        // Sorteer: 1. Punten, 2. Leg saldo, 3. Legs voor
         let arrayStand = Object.values(stats);
         arrayStand.forEach(s => s.saldo = s.legsVoor - s.legsTegen);
         arrayStand.sort((a, b) => {
@@ -274,5 +265,4 @@ function renderKnockouts() {
     `;
 }
 
-// Start de boel!
 init();

@@ -6,7 +6,10 @@ let state = {
     fase: 'setup', 
     poules: { A: [], B: [] },
     matches: [],
-    standings: { A: [], B: [] }
+    standings: { A: [], B: [] },
+    // Nieuwe variabelen voor de Champions League loting:
+    lotingDeelnemers: [], 
+    huidigeTrekking: null 
 };
 
 // DOM Elementen
@@ -30,7 +33,7 @@ function saveState() {
 resetBtn.addEventListener('click', () => {
     if(confirm("Weet je zeker dat je ALLES wilt wissen? Dit kan niet ongedaan gemaakt worden!")) {
         localStorage.removeItem('dartToernooiState');
-        state = { fase: 'setup', poules: { A: [], B: [] }, matches: [], standings: { A: [], B: [] } };
+        state = { fase: 'setup', poules: { A: [], B: [] }, matches: [], standings: { A: [], B: [] }, lotingDeelnemers: [], huidigeTrekking: null };
         render();
     }
 });
@@ -50,7 +53,7 @@ function renderSetup() {
     let html = `
         <div class="card">
             <h2>Wie is er aanwezig?</h2>
-            <p>Vink de spelers aan die meedoen. De computer verdeelt ze straks eerlijk over 2 poules.</p>
+            <p>Vink de spelers aan die meedoen.</p>
             <div class="player-checkboxes">
     `;
     
@@ -61,7 +64,7 @@ function renderSetup() {
 
     html += `
             </div>
-            <button id="start-loting-btn" class="retro-button">🎯 Start Spannende Loting!</button>
+            <button id="start-loting-btn" class="retro-button">🎯 Start De Loting!</button>
         </div>
     `;
     appContainer.innerHTML = html;
@@ -76,18 +79,18 @@ function renderSetup() {
     });
 }
 
-// 2. DE LOTING
+// 2. DE CHAMPIONS LEAGUE LOTING
 function voerLotingUit(spelers) {
+    // Schud alle namen door elkaar en stop ze in de "pot"
     for (let i = spelers.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [spelers[i], spelers[j]] = [spelers[j], spelers[i]];
     }
-
-    const helft = Math.ceil(spelers.length / 2);
-    state.poules.A = spelers.slice(0, helft);
-    state.poules.B = spelers.slice(helft);
     
-    genereerWedstrijden();
+    state.lotingDeelnemers = spelers;
+    state.poules = { A: [], B: [] };
+    state.huidigeTrekking = null;
+    state.matches = []; // Reset matches
     state.fase = 'loting';
     saveState();
 }
@@ -114,27 +117,75 @@ function genereerWedstrijden() {
 }
 
 function renderLoting() {
-    appContainer.innerHTML = `
-        <div class="card">
-            <h2>De Loting is bekend!</h2>
-            <div style="display:flex; justify-content:space-around; margin-top: 20px;">
-                <div>
-                    <h3>Poule A</h3>
-                    ${state.poules.A.map((s, i) => `<div class="draw-reveal" style="animation-delay: ${i * 0.5}s">${s}</div>`).join('')}
-                </div>
-                <div>
-                    <h3>Poule B</h3>
-                    ${state.poules.B.map((s, i) => `<div class="draw-reveal" style="animation-delay: ${(state.poules.A.length + i) * 0.5}s">${s}</div>`).join('')}
-                </div>
-            </div>
-            <button id="naar-poules-btn" class="retro-button" style="margin-top: 30px;">Let's Play Darts! ➡️</button>
-        </div>
-    `;
+    let html = `<div class="card" style="width: 100%; max-width: 600px;">
+                    <h2 style="font-size: 2em;">🏆 DE POT 🏆</h2>`;
 
-    document.getElementById('naar-poules-btn').addEventListener('click', () => {
-        state.fase = 'poules';
-        saveState();
-    });
+    // Als er net een speler getrokken is, toon het "briefje"
+    if (state.huidigeTrekking) {
+        html += `
+            <div class="draw-reveal-big">
+                <h3 style="margin:0; color: #555;">Getrokken Speler:</h3>
+                <h1>${state.huidigeTrekking.naam}</h1>
+                <h2>➡️ POULE ${state.huidigeTrekking.poule}</h2>
+            </div>
+        `;
+    } else {
+         html += `<p style="font-size: 1.3em;">De namen zitten in de koker. Wie wordt als eerste getrokken?</p>`;
+    }
+
+    // Is de pot nog niet leeg? Toon trek knop
+    if (state.lotingDeelnemers.length > 0) {
+        html += `<button id="trek-btn" class="retro-button pulse-btn">
+                    🎲 Trek Volgende Speler<br>
+                    <span style="font-size: 0.6em;">(Nog ${state.lotingDeelnemers.length} in de pot)</span>
+                 </button>`;
+    } else {
+        // Pot is leeg
+        html += `
+            <div class="alert" style="padding: 10px; margin: 20px 0; border-radius: 10px; border: 3px solid var(--border-color);">
+                <h3>✅ Alle poules zijn bekend!</h3>
+            </div>
+            <button id="naar-poules-btn" class="retro-button">Let's Play Darts! ➡️</button>
+        `;
+    }
+
+    // Overzicht van de poules tot nu toe
+    html += `
+        <div style="display:flex; justify-content:space-between; margin-top: 30px; width: 100%;">
+            <div class="poule-list">
+                <h3>Poule A</h3>
+                <ul>${state.poules.A.map(s => `<li>${s}</li>`).join('')}</ul>
+            </div>
+            <div class="poule-list">
+                <h3>Poule B</h3>
+                <ul>${state.poules.B.map(s => `<li>${s}</li>`).join('')}</ul>
+            </div>
+        </div>
+    </div>`;
+
+    appContainer.innerHTML = html;
+
+    // Event listeners
+    if (state.lotingDeelnemers.length > 0) {
+        document.getElementById('trek-btn').addEventListener('click', () => {
+            // Haal de eerste uit de geschudde pot
+            const speler = state.lotingDeelnemers.shift();
+            // Bepaal de poule (die met de minste spelers krijgt de volgende)
+            const poule = (state.poules.A.length <= state.poules.B.length) ? 'A' : 'B';
+            
+            state.poules[poule].push(speler);
+            state.huidigeTrekking = { naam: speler, poule: poule };
+            saveState();
+        });
+    } else {
+        document.getElementById('naar-poules-btn').addEventListener('click', () => {
+            if (state.matches.length === 0) {
+                genereerWedstrijden(); // Maak de wedstrijden nu pas aan
+            }
+            state.fase = 'poules';
+            saveState();
+        });
+    }
 }
 
 // 3. POULE FASE (Standen & Wedstrijden)
@@ -177,7 +228,7 @@ function renderPoules() {
 
     const alleGespeeld = state.matches.every(m => m.gespeeld);
     if (alleGespeeld) {
-        html += `<div class="card"><button id="naar-knockouts-btn" class="retro-button">🏆 Sluit Poules & Start Halve Finales!</button></div>`;
+        html += `<div class="card"><button id="naar-knockouts-btn" class="retro-button pulse-btn">🏆 Sluit Poules & Start Halve Finales!</button></div>`;
     }
 
     appContainer.innerHTML = html;

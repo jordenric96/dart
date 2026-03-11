@@ -4,6 +4,7 @@
     --text-color: #111;
     --border-color: #111;
     --accent-color: #fff;
+    --highlight-color: #ffe600;
 }
 
 body {
@@ -14,13 +15,12 @@ body {
     padding: 20px;
     background-image: radial-gradient(#d4d4d4 2px, transparent 2px);
     background-size: 20px 20px;
-    
     display: flex;
     flex-direction: column;
     align-items: center; 
 }
 
-h1, h2, h3 {
+h1, h2, h3, h4 {
     font-family: 'Alfa Slab One', serif;
     text-transform: uppercase;
     margin: 10px 0;
@@ -28,15 +28,14 @@ h1, h2, h3 {
     text-align: center;
 }
 
-/* Kaders: 100% breedte zodat ze de mobiele schermen vullen */
-.retro-header, .info-item, .card, .placeholder-card {
+/* Kaders voor de header, statische info en dynamische kaarten */
+.retro-header, .info-item, .card {
     background-color: var(--accent-color);
     border: 5px solid var(--border-color);
     border-radius: 10px;
     padding: 20px;
     margin-bottom: 20px;
     box-shadow: 6px 6px 0px 0px var(--border-color);
-    
     width: 100%; 
     max-width: 500px;
     box-sizing: border-box;
@@ -44,47 +43,19 @@ h1, h2, h3 {
 }
 
 /* Header specifiek */
-.retro-header {
-    padding: 30px 15px;
-    margin-bottom: 30px;
-}
+.retro-header { padding: 30px 15px; margin-bottom: 30px; }
+.retro-header .title-small { font-size: 1.5em; margin-bottom: 0; }
+.retro-header .title-large { font-size: clamp(1.2rem, 8vw, 2.5rem); margin: 10px 0; line-height: 1.1; }
+.retro-header h3 { font-size: 1.2em; margin-top: 0; }
 
-.retro-header h1 { 
-    font-size: 1.5em; 
-    margin-bottom: 0;
-}
-
-/* Dynamische font-size iets kleiner gezet en word-break verwijderd */
-.retro-header h2 { 
-    font-size: clamp(1.2rem, 8vw, 2.5rem); 
-    margin: 10px 0; 
-    line-height: 1.1; 
-}
-
-.retro-header h3 { 
-    font-size: 1.2em; 
-    margin-top: 0;
-}
-
-/* Layout containers */
-main {
+/* Info Board specifiek */
+.info-board {
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
 }
-
-.info-board, .players-section, .dashboard {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.info-item {
-    font-size: 1.3em;
-}
-
+.info-item { font-size: 1.3em; }
 .info-item strong {
     font-family: 'Alfa Slab One', serif;
     letter-spacing: 1px;
@@ -92,58 +63,109 @@ main {
     margin-right: 5px;
 }
 
-.alert {
-    background-color: #d9d9d9;
+/* App container */
+#app-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-/* Spelers sectie */
-.card h3 {
-    border-bottom: 3px dashed var(--border-color);
-    padding-bottom: 15px;
-    margin-top: 0;
-    font-size: 1.4em;
-}
-
-.card ul {
-    list-style-type: none;
-    padding: 0;
-    font-size: 1.5em;
-    margin: 0;
-}
-
-.card li {
-    padding: 10px 0;
-    border-bottom: 2px solid #ccc;
-}
-
-.card li:last-child {
-    border-bottom: none;
-}
-
-.section-title {
-    font-size: 2em;
-    margin: 40px 0 20px 0;
-    text-align: center;
-}
-
-/* Dashboard Placeholders */
-.placeholder-card {
-    border: 4px dashed var(--border-color);
-    box-shadow: 4px 4px 0px 0px var(--border-color);
-}
-
-.tba {
-    font-size: 1.3em;
-    color: #555;
-    font-style: italic;
-    margin-bottom: 0;
-}
-
-footer {
-    text-align: center;
+/* Knoppen */
+.retro-button {
     font-family: 'Alfa Slab One', serif;
-    margin-top: 40px;
-    padding: 20px;
-    font-size: 0.8em;
-    color: #555;
+    background-color: var(--highlight-color);
+    color: var(--border-color);
+    border: 4px solid var(--border-color);
+    padding: 10px 20px;
+    font-size: 1.2em;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 4px 4px 0px 0px var(--border-color);
+    transition: all 0.1s;
+    margin: 10px;
 }
+.retro-button:active {
+    box-shadow: 0px 0px 0px 0px var(--border-color);
+    transform: translate(4px, 4px);
+}
+.retro-button.danger {
+    background-color: #ff4d4d;
+    color: white;
+    font-size: 0.9em;
+}
+
+/* Checkboxes voor aanwezigen */
+.player-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+    font-size: 1.4em;
+    margin: 20px 0;
+}
+.player-checkboxes label {
+    background: #eee;
+    padding: 5px 10px;
+    border: 2px solid var(--border-color);
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* Tabellen voor standen */
+.retro-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    font-size: 1.2em;
+}
+.retro-table th, .retro-table td {
+    border: 3px solid var(--border-color);
+    padding: 8px;
+    text-align: center;
+}
+.retro-table th {
+    background-color: var(--border-color);
+    color: var(--accent-color);
+    font-family: 'Alfa Slab One', serif;
+    font-size: 0.8em;
+}
+
+/* Wedstrijden */
+.match-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px dashed #ccc;
+    padding: 10px 0;
+    font-size: 1.3em;
+}
+.match-inputs {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.score-input {
+    width: 40px;
+    height: 40px;
+    font-family: 'Alfa Slab One', serif;
+    font-size: 1.2em;
+    text-align: center;
+    border: 3px solid var(--border-color);
+    border-radius: 5px;
+}
+
+/* Loting Animatie */
+.draw-reveal {
+    font-size: 2em;
+    font-family: 'Alfa Slab One', serif;
+    animation: popIn 0.5s ease-out forwards;
+    opacity: 0;
+    margin: 10px 0;
+}
+@keyframes popIn {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+footer { text-align: center; font-family: 'Alfa Slab One', serif; margin-top: 40px; padding: 20px; font-size: 0.8em; color: #555; }

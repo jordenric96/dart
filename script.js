@@ -1,7 +1,5 @@
-// Standaard spelerslijst
 const alleSpelers = ["Jorden", "Yarni", "Joël", "Vince", "Jessy", "Stefaan", "Wim", "Tibe", "Kristof"];
 
-// State van de app
 let state = {
     fase: 'setup', 
     poules: { A: [], B: [] },
@@ -9,15 +7,15 @@ let state = {
     standings: { A: [], B: [] },
     knockouts: null, 
     lotingDeelnemers: [], 
-    huidigeTrekking: null 
+    huidigeTrekking: null,
+    statsCO: [], // Hoogste uitgooien klassement
+    stats180: [] // 180/171 klassement
 };
 
-// DOM Elementen
 const appContainer = document.getElementById('app-container');
 const infoBoard = document.getElementById('info-board');
 const resetBtn = document.getElementById('reset-btn');
 
-// --- INITIALISATIE ---
 function init() {
     const savedState = localStorage.getItem('dartToernooiState');
     if (savedState) state = JSON.parse(savedState);
@@ -30,55 +28,33 @@ function saveState() {
 }
 
 resetBtn.addEventListener('click', () => {
-    if(confirm("Weet je zeker dat je ALLES wilt wissen? Dit kan niet ongedaan gemaakt worden!")) {
+    if(confirm("Weet je zeker dat je ALLES wilt wissen?")) {
         localStorage.removeItem('dartToernooiState');
-        state = { fase: 'setup', poules: { A: [], B: [] }, matches: [], standings: { A: [], B: [] }, knockouts: null, lotingDeelnemers: [], huidigeTrekking: null };
+        state = { fase: 'setup', poules: { A: [], B: [] }, matches: [], standings: { A: [], B: [] }, knockouts: null, lotingDeelnemers: [], huidigeTrekking: null, statsCO: [], stats180: [] };
         render();
     }
 });
 
-// --- RENDER FUNCTIES ---
 function render() {
     appContainer.innerHTML = '';
-    
-    // Verberg info-board na setup
     infoBoard.style.display = state.fase === 'setup' ? 'flex' : 'none';
     
     if (state.fase === 'setup') renderSetup();
     else if (state.fase === 'loting') renderLoting();
-    else if (state.fase === 'poules') {
-        appContainer.innerHTML = generatePoulesHTML(true);
-        attachPouleEvents(true);
-    }
-    else if (state.fase === 'knockouts') {
-        renderKnockouts();
-        // Toon geschiedenis van de poules onder de knockouts!
-        let geschiedenis = document.createElement('div');
-        geschiedenis.innerHTML = `<h2 style="margin-top:50px;">📜 TOERNOOI GESCHIEDENIS</h2>` + generatePoulesHTML(false);
-        appContainer.appendChild(geschiedenis);
-        attachPouleEvents(false);
-    }
+    else if (state.fase === 'poules' || state.fase === 'knockouts') renderDashboard();
 }
 
-// 1. SETUP FASE
 function renderSetup() {
     let html = `
-        <div class="card">
+        <div class="card" style="max-width: 600px; margin: 0 auto;">
             <h2>Wie is er aanwezig?</h2>
-            <p>Vink de spelers aan die meedoen.</p>
             <div class="player-checkboxes">
     `;
-    
     alleSpelers.forEach(speler => {
         let checked = ["Jorden", "Yarni", "Joël", "Vince", "Jessy", "Stefaan", "Wim"].includes(speler) ? "checked" : "";
         html += `<label><input type="checkbox" class="speler-check" value="${speler}" ${checked}> ${speler}</label>`;
     });
-
-    html += `
-            </div>
-            <button id="start-loting-btn" class="retro-button">🎯 Start De Loting!</button>
-        </div>
-    `;
+    html += `</div><button id="start-loting-btn" class="retro-button pulse-btn">🎯 Start De Loting!</button></div>`;
     appContainer.innerHTML = html;
 
     document.getElementById('start-loting-btn').addEventListener('click', () => {
@@ -88,13 +64,11 @@ function renderSetup() {
     });
 }
 
-// 2. CHAMPIONS LEAGUE LOTING
 function voerLotingUit(spelers) {
     for (let i = spelers.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [spelers[i], spelers[j]] = [spelers[j], spelers[i]];
     }
-    
     state.lotingDeelnemers = spelers;
     state.poules = { A: [], B: [] };
     state.huidigeTrekking = null;
@@ -104,8 +78,7 @@ function voerLotingUit(spelers) {
 }
 
 function renderLoting() {
-    let html = `<div class="card" style="width: 100%; max-width: 600px;">
-                    <h2 style="font-size: 2em;">🏆 DE POT 🏆</h2>`;
+    let html = `<div class="card" style="margin: 0 auto; max-width: 800px;"><h2 style="font-size: 2em;">🏆 DE POT 🏆</h2>`;
 
     if (state.huidigeTrekking) {
         html += `<div class="draw-reveal-big">
@@ -114,10 +87,8 @@ function renderLoting() {
                     <h2>➡️ POULE ${state.huidigeTrekking.poule}</h2>
                  </div>`;
     } else {
-        html += `<div class="draw-reveal-big" id="suspense-box" style="display:none;">
-                    <h1 id="spinning-name">???</h1>
-                 </div>`;
-         html += `<p id="loting-intro" style="font-size: 1.3em;">De namen zitten in de koker!</p>`;
+        html += `<div class="draw-reveal-big" id="suspense-box" style="display:none;"><h1 id="spinning-name">???</h1></div>
+                 <p id="loting-intro" style="font-size: 1.3em;">De namen zitten in de koker!</p>`;
     }
 
     if (state.lotingDeelnemers.length > 0) {
@@ -125,11 +96,10 @@ function renderLoting() {
     } else {
         html += `<div class="alert" style="padding: 10px; margin: 20px 0; border-radius: 10px; border: 3px solid var(--border-color);">
                     <h3>✅ Alle poules zijn bekend!</h3>
-                 </div>
-                 <button id="naar-poules-btn" class="retro-button">Let's Play Darts! ➡️</button>`;
+                 </div><button id="naar-poules-btn" class="retro-button pulse-btn">Let's Play Darts! ➡️</button>`;
     }
 
-    html += `<div style="display:flex; justify-content:space-between; margin-top: 30px; width: 100%;">
+    html += `<div style="display:flex; justify-content:space-around; margin-top: 30px; width: 100%;">
                 <div class="poule-list"><h3>Poule A</h3><ul>${state.poules.A.map(s => `<li>${s}</li>`).join('')}</ul></div>
                 <div class="poule-list"><h3>Poule B</h3><ul>${state.poules.B.map(s => `<li>${s}</li>`).join('')}</ul></div>
              </div></div>`;
@@ -138,7 +108,6 @@ function renderLoting() {
 
     if (state.lotingDeelnemers.length > 0) {
         document.getElementById('trek-btn').addEventListener('click', function() {
-            // Suspense Animatie!
             this.style.display = 'none';
             if(document.getElementById('loting-intro')) document.getElementById('loting-intro').style.display = 'none';
             
@@ -156,13 +125,13 @@ function renderLoting() {
             let interval = setInterval(() => {
                 spinName.innerText = state.lotingDeelnemers[Math.floor(Math.random() * state.lotingDeelnemers.length)];
                 cycles++;
-                if(cycles > 15) { // Na 1.5 seconde stopt het draaien
+                if(cycles > 15) {
                     clearInterval(interval);
                     const speler = state.lotingDeelnemers.shift();
                     const poule = (state.poules.A.length <= state.poules.B.length) ? 'A' : 'B';
                     state.poules[poule].push(speler);
                     state.huidigeTrekking = { naam: speler, poule: poule };
-                    saveState(); // Herlaad de pagina met de echte naam
+                    saveState();
                 }
             }, 100);
         });
@@ -175,7 +144,6 @@ function renderLoting() {
     }
 }
 
-// 3. GENEREREN EN TONEN VAN POULES
 function genereerWedstrijden() {
     state.matches = [];
     ['A', 'B'].forEach(poule => {
@@ -185,110 +153,198 @@ function genereerWedstrijden() {
                 state.matches.push({
                     id: Math.random().toString(36).substr(2, 9),
                     poule: poule, speler1: spelers[i], speler2: spelers[j],
-                    score1: null, score2: null, locked: false
+                    score1: null, score2: null, co1: '', co2: '', max1: '', max2: '', locked: false
                 });
             }
         }
     });
-    berekenStanden();
+    berekenStandenEnStats();
 }
 
-// Functie gesplitst zodat we hem ook als 'geschiedenis' kunnen gebruiken
-function generatePoulesHTML(isActief) {
-    let html = '';
-    ['A', 'B'].forEach(poule => {
-        html += `<div class="card">
-            <h2>Poule ${poule} - Stand</h2>
-            <table class="retro-table">
-                <tr><th>Naam</th><th>#</th><th>W</th><th>G</th><th>V</th><th>PT</th><th>Legs</th></tr>
-                ${state.standings[poule].map(s => `
-                    <tr><td style="text-align: left;"><strong>${s.naam}</strong></td>
-                    <td>${s.gespeeld}</td><td>${s.winst}</td><td>${s.gelijk}</td><td>${s.verlies}</td><td class="punten-cel">${s.punten}</td><td>${s.legsVoor}-${s.legsTegen}</td></tr>
-                `).join('')}
-            </table>
-            <h3>Wedstrijden</h3>
-            ${state.matches.filter(m => m.poule === poule).map(m => `
-                <div class="match-row">
-                    <span class="match-player speler1">${m.speler1}</span>
-                    <div class="match-inputs">
-                        ${m.locked ? 
-                            `<span class="locked-score">${m.score1} - ${m.score2}</span>
-                             ${isActief ? `<button class="icon-btn unlock-btn" data-id="${m.id}">🔒</button>` : ''}` 
-                        : 
-                            `<input type="number" min="0" max="4" class="score-input p-score" data-id="${m.id}" data-speler="1" value="${m.score1 !== null ? m.score1 : ''}">
-                             -
-                             <input type="number" min="0" max="4" class="score-input p-score" data-id="${m.id}" data-speler="2" value="${m.score2 !== null ? m.score2 : ''}">
-                             ${(m.score1 !== null && m.score2 !== null) ? `<button class="icon-btn lock-btn" data-id="${m.id}">✅</button>` : ''}`
-                        }
-                    </div>
-                    <span class="match-player speler2">${m.speler2}</span>
-                </div>
+// --- HET NIEUWE TV DASHBOARD ---
+function renderDashboard() {
+    let html = `<div class="dashboard-grid">`;
+    
+    // Kolom 1: Poule A
+    html += `<div class="grid-col">${generatePouleHTML('A')}</div>`;
+    
+    // Kolom 2: Poule B
+    html += `<div class="grid-col">${generatePouleHTML('B')}</div>`;
+    
+    // Kolom 3: Klassementen & Knockouts
+    html += `<div class="grid-col">`;
+    
+    if (state.fase === 'knockouts' && state.knockouts) {
+        html += generateKnockoutsHTML();
+    } else if (state.matches.every(m => m.locked)) {
+        html += `<div class="card"><button id="naar-knockouts-btn" class="retro-button pulse-btn">🏆 Start Halve Finales!</button></div>`;
+    }
+
+    html += generateStatsHTML();
+    html += `</div></div>`; // Sluit kolom 3 en grid
+
+    appContainer.innerHTML = html;
+    attachEvents();
+}
+
+function generatePouleHTML(poule) {
+    let html = `<div class="card">
+        <h2>Poule ${poule} - Stand</h2>
+        <table class="retro-table">
+            <tr><th>Naam</th><th>#</th><th>W</th><th>G</th><th>V</th><th>PT</th><th>Legs</th></tr>
+            ${state.standings[poule].map(s => `
+                <tr><td style="text-align: left;"><strong>${s.naam}</strong></td>
+                <td>${s.gespeeld}</td><td>${s.winst}</td><td>${s.gelijk}</td><td>${s.verlies}</td><td class="punten-cel">${s.punten}</td><td>${s.legsVoor}-${s.legsTegen}</td></tr>
             `).join('')}
+        </table>
+        <h3 style="margin-top: 30px;">Wedstrijden</h3>`;
+        
+    html += state.matches.filter(m => m.poule === poule).map(m => `
+        <div class="match-container">
+            <div class="match-row">
+                <span class="match-player speler1">${m.speler1}</span>
+                <div class="match-inputs">
+                    ${m.locked ? 
+                        `<span class="locked-score">${m.score1} - ${m.score2}</span>
+                         <button class="icon-btn unlock-btn" data-id="${m.id}" data-array="matches">🔒</button>` 
+                    : 
+                        `<input type="number" min="0" max="4" class="score-input data-input" data-id="${m.id}" data-field="score1" data-array="matches" value="${m.score1 !== null ? m.score1 : ''}">
+                         -
+                         <input type="number" min="0" max="4" class="score-input data-input" data-id="${m.id}" data-field="score2" data-array="matches" value="${m.score2 !== null ? m.score2 : ''}">
+                         ${(m.score1 !== null && m.score2 !== null) ? `<button class="icon-btn lock-btn" data-id="${m.id}" data-array="matches">✅</button>` : ''}`
+                    }
+                </div>
+                <span class="match-player speler2">${m.speler2}</span>
+            </div>
+            <div class="match-extras">
+                <div class="extra-box">
+                    CO: <input type="text" placeholder="bv 120,40" class="extra-input co-input data-input" data-id="${m.id}" data-field="co1" data-array="matches" value="${m.co1}" ${m.locked ? 'disabled' : ''}>
+                    180: <input type="number" min="0" placeholder="0" class="extra-input max-input data-input" data-id="${m.id}" data-field="max1" data-array="matches" value="${m.max1}" ${m.locked ? 'disabled' : ''}>
+                </div>
+                <strong>|</strong>
+                <div class="extra-box">
+                    CO: <input type="text" placeholder="bv 60" class="extra-input co-input data-input" data-id="${m.id}" data-field="co2" data-array="matches" value="${m.co2}" ${m.locked ? 'disabled' : ''}>
+                    180: <input type="number" min="0" placeholder="0" class="extra-input max-input data-input" data-id="${m.id}" data-field="max2" data-array="matches" value="${m.max2}" ${m.locked ? 'disabled' : ''}>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    return html + `</div>`;
+}
+
+function generateKnockoutsHTML() {
+    let html = `<div class="card" style="border-color: var(--highlight-color); box-shadow: 6px 6px 0px 0px var(--highlight-color);">
+        <h2>🔥 KNOCK-OUTS 🔥</h2>`;
+    
+    state.knockouts.forEach((m, index) => {
+        if (index === 2) html += `<hr style="border:1px dashed #ccc; margin:15px 0;"><h3>🏆 DE GROTE FINALE 🏆</h3>`;
+        html += `
+        <div class="match-container">
+            <div class="match-row" style="font-size: 1.3em;">
+                <span class="match-player speler1">${m.speler1}</span>
+                <div class="match-inputs">
+                    ${m.locked ? 
+                        `<span class="locked-score">${m.score1} - ${m.score2}</span>
+                         <button class="icon-btn unlock-btn" data-id="${m.id}" data-array="knockouts">🔒</button>` 
+                    : 
+                        `<input type="number" min="0" max="7" class="score-input data-input" data-id="${m.id}" data-field="score1" data-array="knockouts" value="${m.score1 !== null ? m.score1 : ''}">
+                         -
+                         <input type="number" min="0" max="7" class="score-input data-input" data-id="${m.id}" data-field="score2" data-array="knockouts" value="${m.score2 !== null ? m.score2 : ''}">
+                         ${(m.score1 !== null && m.score2 !== null) ? `<button class="icon-btn lock-btn" data-id="${m.id}" data-array="knockouts">✅</button>` : ''}`
+                    }
+                </div>
+                <span class="match-player speler2">${m.speler2}</span>
+            </div>
+            <div class="match-extras">
+                <div class="extra-box">CO: <input type="text" class="extra-input co-input data-input" data-id="${m.id}" data-field="co1" data-array="knockouts" value="${m.co1}" ${m.locked ? 'disabled' : ''}> 180: <input type="number" class="extra-input max-input data-input" data-id="${m.id}" data-field="max1" data-array="knockouts" value="${m.max1}" ${m.locked ? 'disabled' : ''}></div>
+                <strong>|</strong>
+                <div class="extra-box">CO: <input type="text" class="extra-input co-input data-input" data-id="${m.id}" data-field="co2" data-array="knockouts" value="${m.co2}" ${m.locked ? 'disabled' : ''}> 180: <input type="number" class="extra-input max-input data-input" data-id="${m.id}" data-field="max2" data-array="knockouts" value="${m.max2}" ${m.locked ? 'disabled' : ''}></div>
+            </div>
         </div>`;
     });
+    return html + `</div>`;
+}
 
-    if (isActief && state.matches.every(m => m.locked)) {
-        html += `<div class="card"><button id="naar-knockouts-btn" class="retro-button pulse-btn">🏆 Sluit Poules & Start Halve Finales!</button></div>`;
-    }
+function generateStatsHTML() {
+    let html = `<div class="card"><h2>📊 Statistieken</h2>`;
+    
+    // Checkouts Tabel
+    html += `<h3 style="margin-top:20px;">🔥 Hoogste Checkouts</h3>
+             <table class="retro-table stat-table"><tr><th>Speler</th><th>Uitgooi</th></tr>`;
+    if (state.statsCO.length === 0) html += `<tr><td colspan="2">Nog geen checkouts genoteerd...</td></tr>`;
+    else state.statsCO.slice(0, 5).forEach(co => html += `<tr><td>${co.naam}</td><td><strong>${co.score}</strong></td></tr>`);
+    html += `</table>`;
+
+    // 180s Tabel
+    html += `<h3 style="margin-top:20px;">🍺 Meeste 180/171's</h3>
+             <table class="retro-table stat-table"><tr><th>Speler</th><th>Aantal</th></tr>`;
+    if (state.stats180.length === 0) html += `<tr><td colspan="2">Nog geen 180's gegooid...</td></tr>`;
+    else state.stats180.slice(0, 5).forEach(m => html += `<tr><td>${m.naam}</td><td><strong>${m.count}</strong></td></tr>`);
+    html += `</table></div>`;
+
     return html;
 }
 
-function attachPouleEvents(isActief) {
-    if(!isActief) return; // Geen events als het geschiedenis is
-    document.querySelectorAll('.p-score').forEach(input => {
-        input.addEventListener('change', (e) => handleScoreChange(e.target, state.matches));
+// --- EVENTS & LOGICA ---
+function attachEvents() {
+    document.querySelectorAll('.data-input').forEach(input => {
+        input.addEventListener('change', (e) => handleDataChange(e.target));
     });
     document.querySelectorAll('.lock-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => toggleLock(e.target.getAttribute('data-id'), true, state.matches));
+        btn.addEventListener('click', (e) => toggleLock(e.target, true));
     });
     document.querySelectorAll('.unlock-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => toggleLock(e.target.getAttribute('data-id'), false, state.matches));
+        btn.addEventListener('click', (e) => toggleLock(e.target, false));
     });
     
-    let btn = document.getElementById('naar-knockouts-btn');
-    if (btn) {
-        btn.addEventListener('click', () => {
-            initKnockouts();
-            state.fase = 'knockouts';
-            saveState();
-        });
-    }
+    let koBtn = document.getElementById('naar-knockouts-btn');
+    if (koBtn) koBtn.addEventListener('click', () => {
+        initKnockouts();
+        state.fase = 'knockouts';
+        saveState();
+    });
 }
 
-// 4. SCORE & SLOTJES LOGICA
-function handleScoreChange(input, matchArray) {
-    const matchId = input.getAttribute('data-id');
-    const spelerNummer = input.getAttribute('data-speler');
-    const match = matchArray.find(m => m.id === matchId);
+function handleDataChange(input) {
+    const id = input.getAttribute('data-id');
+    const field = input.getAttribute('data-field'); // score1, co1, max2, etc.
+    const arrayName = input.getAttribute('data-array'); // matches of knockouts
     
-    match['score' + spelerNummer] = input.value === '' ? null : parseInt(input.value);
-    saveState(); // Update de "✅" knop
-}
-
-function toggleLock(id, lockStatus, matchArray) {
-    if (!lockStatus) {
-        let code = prompt("Voer de code in om deze uitslag te wijzigen:");
-        if (code !== "Nala" && code !== "nala") {
-            alert("❌ Foutieve code!"); return;
-        }
-    }
-    const match = matchArray.find(m => m.id === id);
-    match.locked = lockStatus;
+    const targetArray = state[arrayName];
+    const match = targetArray.find(m => m.id === id);
     
-    if (matchArray === state.matches) berekenStanden();
-    else if (matchArray === state.knockouts) updateFinaleSchema();
+    if (field.includes('score')) match[field] = input.value === '' ? null : parseInt(input.value);
+    else match[field] = input.value; // Text for CO, string number for 180s
     
     saveState();
 }
 
-function berekenStanden() {
+function toggleLock(btn, lockStatus) {
+    const id = btn.getAttribute('data-id');
+    const arrayName = btn.getAttribute('data-array');
+    const targetArray = state[arrayName];
+    
+    if (!lockStatus) {
+        let code = prompt("Voer de code in om deze uitslag te wijzigen:");
+        if (code !== "Nala" && code !== "nala") { alert("❌ Foutieve code!"); return; }
+    }
+    
+    const match = targetArray.find(m => m.id === id);
+    match.locked = lockStatus;
+    
+    berekenStandenEnStats();
+    if (arrayName === 'knockouts') updateFinaleSchema();
+    saveState();
+}
+
+function berekenStandenEnStats() {
+    // 1. Standen
     ['A', 'B'].forEach(poule => {
         let stats = {};
         state.poules[poule].forEach(speler => {
             stats[speler] = { naam: speler, gespeeld: 0, winst: 0, gelijk: 0, verlies: 0, punten: 0, legsVoor: 0, legsTegen: 0, saldo: 0 };
         });
 
-        // Enkel gelockte matches tellen mee voor de echte stand!
         state.matches.filter(m => m.poule === poule && m.locked).forEach(m => {
             let s1 = stats[m.speler1]; let s2 = stats[m.speler2];
             s1.gespeeld++; s2.gespeeld++;
@@ -309,14 +365,33 @@ function berekenStanden() {
         });
         state.standings[poule] = arrayStand;
     });
+
+    // 2. Extra Statistieken (Alleen uit gelockte wedstrijden)
+    let tempCO = [];
+    let temp180 = {};
+    
+    let alleGelockteMatches = state.matches.filter(m => m.locked);
+    if (state.knockouts) alleGelockteMatches = alleGelockteMatches.concat(state.knockouts.filter(m => m.locked));
+
+    alleGelockteMatches.forEach(m => {
+        // 180s
+        if (m.max1) { temp180[m.speler1] = (temp180[m.speler1] || 0) + parseInt(m.max1); }
+        if (m.max2) { temp180[m.speler2] = (temp180[m.speler2] || 0) + parseInt(m.max2); }
+        
+        // Checkouts (splits op komma, haal spaties weg)
+        if (m.co1) m.co1.split(',').forEach(co => { let val = parseInt(co.trim()); if(!isNaN(val)) tempCO.push({naam: m.speler1, score: val}); });
+        if (m.co2) m.co2.split(',').forEach(co => { let val = parseInt(co.trim()); if(!isNaN(val)) tempCO.push({naam: m.speler2, score: val}); });
+    });
+
+    state.statsCO = tempCO.sort((a, b) => b.score - a.score); // Sorteer checkouts van hoog naar laag
+    state.stats180 = Object.keys(temp180).map(k => ({naam: k, count: temp180[k]})).filter(x => x.count > 0).sort((a, b) => b.count - a.count);
 }
 
-// 5. KNOCK-OUT LOGICA
 function initKnockouts() {
     state.knockouts = [
-        { id: 'hf1', speler1: state.standings.A[0].naam, speler2: (state.standings.B[1]?.naam || "Bye"), score1: null, score2: null, locked: false },
-        { id: 'hf2', speler1: state.standings.B[0].naam, speler2: (state.standings.A[1]?.naam || "Bye"), score1: null, score2: null, locked: false },
-        { id: 'fin', speler1: 'Winnaar HF 1', speler2: 'Winnaar HF 2', score1: null, score2: null, locked: false }
+        { id: 'hf1', speler1: state.standings.A[0].naam, speler2: (state.standings.B[1]?.naam || "Bye"), score1: null, score2: null, co1: '', co2: '', max1: '', max2: '', locked: false },
+        { id: 'hf2', speler1: state.standings.B[0].naam, speler2: (state.standings.A[1]?.naam || "Bye"), score1: null, score2: null, co1: '', co2: '', max1: '', max2: '', locked: false },
+        { id: 'fin', speler1: 'Winnaar HF 1', speler2: 'Winnaar HF 2', score1: null, score2: null, co1: '', co2: '', max1: '', max2: '', locked: false }
     ];
 }
 
@@ -330,55 +405,6 @@ function updateFinaleSchema() {
 
     if (hf2.locked) fin.speler2 = hf2.score1 > hf2.score2 ? hf2.speler1 : hf2.speler2;
     else fin.speler2 = 'Winnaar HF 2';
-}
-
-function renderKnockouts() {
-    let html = `
-        <div class="card">
-            <h2>🔥 HALVE FINALES 🔥</h2>
-            ${renderKnockoutMatch(state.knockouts[0])}
-            <hr style="border:1px dashed #ccc; margin:15px 0;">
-            ${renderKnockoutMatch(state.knockouts[1])}
-        </div>
-        <div class="card" style="border-color: var(--highlight-color); box-shadow: 6px 6px 0px 0px var(--highlight-color);">
-            <h2 style="font-size: 2.5em;">🏆 DE GROTE FINALE 🏆</h2>
-            ${renderKnockoutMatch(state.knockouts[2])}
-        </div>
-    `;
-    
-    let container = document.createElement('div');
-    container.innerHTML = html;
-    appContainer.appendChild(container);
-
-    document.querySelectorAll('.k-score').forEach(input => {
-        input.addEventListener('change', (e) => handleScoreChange(e.target, state.knockouts));
-    });
-    document.querySelectorAll('.lock-k-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => toggleLock(e.target.getAttribute('data-id'), true, state.knockouts));
-    });
-    document.querySelectorAll('.unlock-k-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => toggleLock(e.target.getAttribute('data-id'), false, state.knockouts));
-    });
-}
-
-function renderKnockoutMatch(m) {
-    return `
-        <div class="match-row" style="font-size: 1.4em;">
-            <span class="match-player speler1"><strong>${m.speler1}</strong></span>
-            <div class="match-inputs">
-                ${m.locked ? 
-                    `<span class="locked-score">${m.score1} - ${m.score2}</span>
-                     <button class="icon-btn unlock-k-btn" data-id="${m.id}">🔒</button>` 
-                : 
-                    `<input type="number" min="0" max="7" class="score-input k-score" data-id="${m.id}" data-speler="1" value="${m.score1 !== null ? m.score1 : ''}">
-                     -
-                     <input type="number" min="0" max="7" class="score-input k-score" data-id="${m.id}" data-speler="2" value="${m.score2 !== null ? m.score2 : ''}">
-                     ${(m.score1 !== null && m.score2 !== null) ? `<button class="icon-btn lock-k-btn" data-id="${m.id}">✅</button>` : ''}`
-                }
-            </div>
-            <span class="match-player speler2"><strong>${m.speler2}</strong></span>
-        </div>
-    `;
 }
 
 init();

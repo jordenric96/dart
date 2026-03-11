@@ -11,11 +11,10 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     margin: 0;
-    padding: 30px 15px;
+    padding: 20px;
     background-image: radial-gradient(#d4d4d4 2px, transparent 2px);
     background-size: 20px 20px;
     
-    /* Zorgt dat alles netjes in het midden uitlijnt, zoals op je foto */
     display: flex;
     flex-direction: column;
     align-items: center; 
@@ -29,45 +28,53 @@ h1, h2, h3 {
     text-align: center;
 }
 
-/* Gedeelde styling voor alle "blokken" om de breedte gelijk te trekken */
+/* Kaders: 100% breedte zodat ze de mobiele schermen vullen */
 .retro-header, .info-item, .card, .placeholder-card {
     background-color: var(--accent-color);
     border: 5px solid var(--border-color);
     border-radius: 10px;
     padding: 20px;
     margin-bottom: 20px;
-    box-shadow: 8px 8px 0px 0px var(--border-color);
+    box-shadow: 6px 6px 0px 0px var(--border-color);
     
-    /* Dit is de sleutel tot de layout van je screenshot */
-    width: 100%;
-    max-width: 380px; 
+    width: 100%; 
+    max-width: 500px; /* Voorkomt dat het té breed wordt op een pc */
     box-sizing: border-box;
     text-align: center;
 }
 
 /* Header specifiek */
 .retro-header {
-    padding: 40px 15px;
+    padding: 30px 15px;
     margin-bottom: 30px;
 }
 
 .retro-header h1 { 
-    font-size: 1.8em; 
+    font-size: 1.5em; 
+    margin-bottom: 0;
 }
 
-/* 'clamp' zorgt dat het lange woord op mobiel niet buiten het kader valt */
+/* Dynamische font-size zodat DARTTOERNOOI altijd past */
 .retro-header h2 { 
-    font-size: clamp(1.8rem, 9vw, 2.8rem); 
-    margin: 5px 0; 
+    font-size: clamp(1.5rem, 10vw, 3rem); 
+    margin: 10px 0; 
     line-height: 1.1; 
-    word-wrap: break-word;
+    word-break: break-word; /* Voorkomt overloop */
 }
 
 .retro-header h3 { 
     font-size: 1.2em; 
+    margin-top: 0;
 }
 
-/* Flexbox containers om de items te centreren */
+/* Layout containers */
+main {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
 .info-board, .players-section, .dashboard {
     width: 100%;
     display: flex;
@@ -79,12 +86,12 @@ h1, h2, h3 {
     font-size: 1.3em;
 }
 
+/* Titels in de info-blokken nu inline met de tekst */
 .info-item strong {
     font-family: 'Alfa Slab One', serif;
     letter-spacing: 1px;
-    font-size: 0.85em;
-    display: block;
-    margin-bottom: 8px;
+    font-size: 0.9em;
+    margin-right: 5px;
 }
 
 .alert {
@@ -124,7 +131,7 @@ h1, h2, h3 {
 /* Dashboard Placeholders */
 .placeholder-card {
     border: 4px dashed var(--border-color);
-    box-shadow: 6px 6px 0px 0px var(--border-color);
+    box-shadow: 4px 4px 0px 0px var(--border-color);
 }
 
 .tba {

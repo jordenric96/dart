@@ -40,5 +40,23 @@
     </div>
 
     <script src="script.js"></script>
+
+        <button id="friet-btn" class="floating-btn">🍟 De Rekening</button>
+
+    <div id="friet-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content retro-receipt">
+            <button id="close-modal-btn" class="retro-button danger" style="float: right; margin: 0;">✖</button>
+            <h2 style="font-size: 2em; border-bottom: 4px dashed var(--border-color); padding-bottom: 10px;">🧾 DE REKENING</h2>
+            
+            <div id="rekening-inhoud">
+                </div>
+
+            <div style="margin-top: 20px; border-top: 4px dashed var(--border-color); padding-top: 15px; font-size: 1.2em;">
+                <strong>💳 Gelieve te storten naar:</strong><br>
+                <span id="rekening-nummer-display">Vul later in...</span>
+            </div>
+        </div>
+    </div>
+    
 </body>
 </html>

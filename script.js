@@ -1,6 +1,6 @@
-// --- JOUW DATA VOOR DE REKENING (Later aan te passen) ---
+// --- JOUW DATA VOOR DE REKENING (Kristof is verwijderd) ---
 const financiën = {
-    collectAndGoTotaal: 0.00, // Vul hier later de prijs in (bijv. 145.50)
+    collectAndGoTotaal: 0.00, // Vul hier later de prijs in
     rekeningNummer: "BE00 0000 0000 0000 (Op naam van ...)", 
     bestellingen: {
         "Jorden": { item: "Groot pak + Bicky", prijs: 0.00 },
@@ -10,14 +10,13 @@ const financiën = {
         "Jessy": { item: "Groot pak + Curryworst", prijs: 0.00 },
         "Stefaan": { item: "Friet + satékruiden", prijs: 0.00 },
         "Wim": { item: "Frietje mayo", prijs: 0.00 },
-        "Tibe": { item: "Familiepak", prijs: 0.00 },
-        
+        "Tibe": { item: "Familiepak", prijs: 0.00 }
     }
-    
 };
 // --------------------------------------------------------
 
-const alleSpelers = ["Jorden", "Yarni", "Joël", "Vince", "Jessy", "Stefaan", "Wim", "Tibe", "Kristof"];
+// Kristof is verwijderd. We hebben nu exact 8 spelers.
+const alleSpelers = ["Jorden", "Yarni", "Joël", "Vince", "Jessy", "Stefaan", "Wim", "Tibe"];
 
 let state = {
     fase: 'setup', 
@@ -37,16 +36,11 @@ const infoBoard = document.getElementById('info-board');
 const mainHeader = document.getElementById('main-header');
 const resetBtn = document.getElementById('reset-btn');
 
-const frietBtn = document.getElementById('friet-btn');
-const frietModal = document.getElementById('friet-modal');
-const closeModalBtn = document.getElementById('close-modal-btn');
-const rekeningInhoud = document.getElementById('rekening-inhoud');
-const rekeningNummerDisplay = document.getElementById('rekening-nummer-display');
-
 function init() {
     const savedState = localStorage.getItem('dartToernooiState');
     if (savedState) state = JSON.parse(savedState);
     render();
+    setupFrietModal(); // Laad de rekening functionaliteit in
 }
 
 function saveState() {
@@ -55,7 +49,7 @@ function saveState() {
 }
 
 resetBtn.addEventListener('click', () => {
-    if(confirm("Weet je zeker dat je ALLES wilt wissen?")) {
+    if(confirm("Weet je zeker dat je ALLES wilt wissen? Dit kan niet ongedaan gemaakt worden!")) {
         localStorage.removeItem('dartToernooiState');
         state = { fase: 'setup', poules: { A: [], B: [] }, matches: [], standings: { A: [], B: [] }, knockouts: null, lotingDeelnemers: [], huidigeTrekking: null, statsCO: [], stats180: [] };
         render();
@@ -83,8 +77,8 @@ function render() {
 function renderSetup() {
     let html = `<div class="card" style="max-width: 600px; margin: 0 auto;"><h2>Wie is er aanwezig?</h2><div class="player-checkboxes">`;
     alleSpelers.forEach(speler => {
-        let checked = ["Jorden", "Yarni", "Joël", "Vince", "Jessy", "Stefaan", "Wim"].includes(speler) ? "checked" : "";
-        html += `<label><input type="checkbox" class="speler-check" value="${speler}" ${checked}> ${speler}</label>`;
+        // Alle 8 standaard aangevinkt
+        html += `<label><input type="checkbox" class="speler-check" value="${speler}" checked> ${speler}</label>`;
     });
     html += `</div><button id="start-loting-btn" class="retro-button">🎯 Start De Loting!</button></div>`;
     appContainer.innerHTML = html;
@@ -353,20 +347,34 @@ function updateFinaleSchema() {
 }
 
 // --- FRIET & REKENING LOGICA ---
-frietBtn.addEventListener('click', () => {
-    genereerRekening();
-    frietModal.style.display = 'flex';
-});
+function setupFrietModal() {
+    const frietBtn = document.getElementById('friet-btn');
+    const frietModal = document.getElementById('friet-modal');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const rekeningInhoud = document.getElementById('rekening-inhoud');
+    const rekeningNummerDisplay = document.getElementById('rekening-nummer-display');
 
-closeModalBtn.addEventListener('click', () => {
-    frietModal.style.display = 'none';
-});
+    if (frietBtn) {
+        frietBtn.addEventListener('click', () => {
+            genereerRekening(rekeningNummerDisplay, rekeningInhoud);
+            frietModal.style.display = 'flex';
+        });
+    }
 
-frietModal.addEventListener('click', (e) => {
-    if(e.target === frietModal) frietModal.style.display = 'none';
-});
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', () => {
+            frietModal.style.display = 'none';
+        });
+    }
 
-function genereerRekening() {
+    if (frietModal) {
+        frietModal.addEventListener('click', (e) => {
+            if(e.target === frietModal) frietModal.style.display = 'none';
+        });
+    }
+}
+
+function genereerRekening(rekeningNummerDisplay, rekeningInhoud) {
     rekeningNummerDisplay.innerText = financiën.rekeningNummer;
     
     let actieveSpelers = [];

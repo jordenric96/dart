@@ -35,12 +35,6 @@ const infoBoard = document.getElementById('info-board');
 const mainHeader = document.getElementById('main-header');
 const resetBtn = document.getElementById('reset-btn');
 
-const frietBtn = document.getElementById('friet-btn');
-const frietModal = document.getElementById('friet-modal');
-const closeModalBtn = document.getElementById('close-modal-btn');
-const rekeningInhoud = document.getElementById('rekening-inhoud');
-const rekeningNummerDisplay = document.getElementById('rekening-nummer-display');
-
 function init() {
     const savedState = localStorage.getItem('dartToernooiState');
     if (savedState) state = JSON.parse(savedState);
@@ -51,6 +45,11 @@ function init() {
 function saveState() {
     localStorage.setItem('dartToernooiState', JSON.stringify(state));
     render();
+}
+
+function saveStateSilent() {
+    // Slaat de data op, maar hertekent het scherm NIET. Voorkomt dat de animatie breekt.
+    localStorage.setItem('dartToernooiState', JSON.stringify(state));
 }
 
 resetBtn.addEventListener('click', () => {
@@ -94,6 +93,7 @@ function renderSetup() {
     });
 }
 
+// --- NIEUWE AUTOMATISCHE LOTING LOGICA ---
 function voerLotingUit(spelers) {
     for (let i = spelers.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -104,113 +104,127 @@ function voerLotingUit(spelers) {
     state.huidigeTrekking = null;
     state.matches = []; 
     state.fase = 'loting';
-    saveState();
+    saveStateSilent(); 
+    render(); 
+    
+    setTimeout(startAutoLotingSequence, 1000);
 }
 
 function renderLoting() {
-    let html = `<div class="card" style="margin: 0 auto; max-width: 600px;"><h2>🏆 DE POT 🏆</h2>`;
+    let html = `<div class="card" style="margin: 0 auto; max-width: 600px;">
+        <h2>🏆 DE POT 🏆</h2>
+        
+        <div id="hype-box" class="draw-reveal-big" style="display:none; text-align: center; padding: 40px 20px; border-color: var(--highlight-color); background: var(--border-color); color: var(--accent-color);">
+            <h1 id="hype-text" style="line-height: 1.5; color: var(--highlight-color); font-size: 1.8em;"></h1>
+        </div>
 
-    if (state.huidigeTrekking) {
-        // Wat we zien als een speler + poule volledig getrokken is
-        html += `<div class="draw-reveal-big">
-                    <h3 style="margin:0; color: #555;">Speler:</h3>
-                    <h1>${state.huidigeTrekking.naam}</h1>
-                    <h3 style="margin:10px 0 0 0; color: #555;">Poule:</h3>
-                    <h2 style="font-size: 2em; margin: 0; background-color: var(--border-color); color: #fff; display: inline-block; padding: 5px 15px; border-radius: 5px;">${state.huidigeTrekking.poule}</h2>
-                 </div>`;
-    } else {
-        // Startscherm van de loting
-        html += `<div class="draw-reveal-big" id="suspense-box" style="display:none;">
-                    <h3 style="margin:0; color: #555;">Speler:</h3>
-                    <h1 id="spinning-name">???</h1>
-                    <div id="poule-reveal-area" style="display:none;">
-                        <h3 style="margin:10px 0 0 0; color: #555;">Poule:</h3>
-                        <h2 id="spinning-poule" style="font-size: 2em; margin: 0; background-color: var(--border-color); color: #fff; display: inline-block; padding: 5px 15px; border-radius: 5px;">?</h2>
-                    </div>
-                 </div>
-                 <p id="loting-intro">De namen zitten in de koker!</p>`;
-    }
+        <div class="draw-reveal-big" id="suspense-box">
+            <h3 style="margin:0; color: #555;">Speler:</h3>
+            <h1 id="spinning-name">Klaarzetten...</h1>
+            <div id="poule-reveal-area" style="display:none;">
+                <h3 style="margin:10px 0 0 0; color: #555;">Poule:</h3>
+                <h2 id="spinning-poule" style="font-size: 2em; margin: 0; background-color: var(--border-color); color: #fff; display: inline-block; padding: 5px 15px; border-radius: 5px;">?</h2>
+            </div>
+        </div>
 
-    if (state.lotingDeelnemers.length > 0) {
-        html += `<button id="trek-btn" class="retro-button" style="font-size: 1.3em; padding: 10px 20px;">🎲 Trek Speler (${state.lotingDeelnemers.length})</button>`;
-    } else {
-        html += `<div class="alert" style="padding: 10px; margin: 10px 0; border: 2px solid var(--border-color);"><h3>✅ Poules bekend!</h3></div><button id="naar-poules-btn" class="retro-button">Let's Play Darts! ➡️</button>`;
-    }
-
-    html += `<div style="display:flex; justify-content:space-around; margin-top: 15px; width: 100%;">
-                <div class="poule-list"><h3>Poule A</h3><ul>${state.poules.A.map(s => `<li>${s}</li>`).join('')}</ul></div>
-                <div class="poule-list"><h3>Poule B</h3><ul>${state.poules.B.map(s => `<li>${s}</li>`).join('')}</ul></div>
-             </div></div>`;
+        <div style="display:flex; justify-content:space-around; margin-top: 15px; width: 100%;">
+            <div class="poule-list"><h3>Poule A</h3><ul id="poule-A-list">${state.poules.A.map(s => `<li>${s}</li>`).join('')}</ul></div>
+            <div class="poule-list"><h3>Poule B</h3><ul id="poule-B-list">${state.poules.B.map(s => `<li>${s}</li>`).join('')}</ul></div>
+        </div>
+    </div>`;
 
     appContainer.innerHTML = html;
-
-    if (state.lotingDeelnemers.length > 0) {
-        document.getElementById('trek-btn').addEventListener('click', function() {
-            this.style.display = 'none';
-            if(document.getElementById('loting-intro')) document.getElementById('loting-intro').style.display = 'none';
-            
-            let suspenseBox = document.getElementById('suspense-box');
-            if(suspenseBox) {
-                suspenseBox.style.display = 'block';
-                document.getElementById('poule-reveal-area').style.display = 'none'; // Verberg poule deel eerst
-            }
-            
-            let spinName = document.getElementById('spinning-name');
-            let spinPoule = document.getElementById('spinning-poule');
-            
-            // FASE 1: SPELER TREKKEN (Draait 1.5 seconden)
-            let cyclesName = 0;
-            let intervalName = setInterval(() => {
-                spinName.innerText = state.lotingDeelnemers[Math.floor(Math.random() * state.lotingDeelnemers.length)];
-                cyclesName++;
-                
-                if(cyclesName > 15) {
-                    clearInterval(intervalName);
-                    // Haal de getrokken speler officieel uit de pot
-                    const speler = state.lotingDeelnemers.shift(); 
-                    spinName.innerText = speler; // Laat hem staan
-
-                    // FASE 2: KORTE PAUZE, DAN POULE TREKKEN
-                    setTimeout(() => {
-                        document.getElementById('poule-reveal-area').style.display = 'block';
-                        
-                        // Kijk welke poules nog plaats hebben (max 4 per poule)
-                        let validPoules = [];
-                        if (state.poules.A.length < 4) validPoules.push('A');
-                        if (state.poules.B.length < 4) validPoules.push('B');
-
-                        let cyclesPoule = 0;
-                        let intervalPoule = setInterval(() => {
-                            // Wissel snel tussen A en B voor het effect
-                            spinPoule.innerText = (Math.random() > 0.5) ? 'A' : 'B'; 
-                            cyclesPoule++;
-                            
-                            if (cyclesPoule > 15) {
-                                clearInterval(intervalPoule);
-                                // Kies ECHT een poule uit de beschikbare opties
-                                const poule = validPoules[Math.floor(Math.random() * validPoules.length)];
-                                spinPoule.innerText = poule;
-                                
-                                // FASE 3: OPSLAAN EN RESULTAAT LATEN ZIEN
-                                state.poules[poule].push(speler);
-                                state.huidigeTrekking = { naam: speler, poule: poule };
-                                
-                                setTimeout(() => { saveState(); }, 1200); // 1.2s wachten voor de pagina ververst
-                            }
-                        }, 80); // Poule draait ietsjes sneller
-
-                    }, 800); // Wacht 0.8s tussen speler en poule animatie
-                }
-            }, 100);
-        });
-    } else {
-        document.getElementById('naar-poules-btn').addEventListener('click', () => {
-            if (state.matches.length === 0) genereerWedstrijden();
-            state.fase = 'poules';
-            saveState();
-        });
-    }
 }
+
+function startAutoLotingSequence() {
+    if (state.fase !== 'loting') return; 
+    trekVolgendeSpeler();
+}
+
+function trekVolgendeSpeler() {
+    if (state.lotingDeelnemers.length === 0) {
+        setTimeout(startHypeSequence, 1000); 
+        return;
+    }
+
+    const speler = state.lotingDeelnemers.shift();
+    
+    let validPoules = [];
+    if (state.poules.A.length < 4) validPoules.push('A');
+    if (state.poules.B.length < 4) validPoules.push('B');
+    const poule = validPoules[Math.floor(Math.random() * validPoules.length)];
+
+    const spinName = document.getElementById('spinning-name');
+    const spinPoule = document.getElementById('spinning-poule');
+    const pouleRevealArea = document.getElementById('poule-reveal-area');
+    
+    pouleRevealArea.style.display = 'none';
+
+    let cyclesName = 0;
+    let intervalName = setInterval(() => {
+        spinName.innerText = alleSpelers[Math.floor(Math.random() * alleSpelers.length)];
+        cyclesName++;
+
+        if (cyclesName > 12) {
+            clearInterval(intervalName);
+            spinName.innerText = speler; 
+            
+            setTimeout(() => {
+                pouleRevealArea.style.display = 'block';
+                let cyclesPoule = 0;
+                let intervalPoule = setInterval(() => {
+                    spinPoule.innerText = (Math.random() > 0.5) ? 'A' : 'B';
+                    cyclesPoule++;
+
+                    if (cyclesPoule > 10) {
+                        clearInterval(intervalPoule);
+                        spinPoule.innerText = poule; 
+                        
+                        state.poules[poule].push(speler);
+                        document.getElementById(`poule-${poule}-list`).innerHTML += `<li>${speler}</li>`;
+                        saveStateSilent();
+
+                        setTimeout(trekVolgendeSpeler, 1800); 
+                    }
+                }, 80);
+            }, 600); 
+        }
+    }, 80); 
+}
+
+function startHypeSequence() {
+    const suspenseBox = document.getElementById('suspense-box');
+    const hypeBox = document.getElementById('hype-box');
+    const hypeText = document.getElementById('hype-text');
+
+    suspenseBox.style.display = 'none';
+    hypeBox.style.display = 'block';
+
+    const messages = [
+        "🔥 DE POULES ZIJN GEKEND! 🔥",
+        "De pijlen zijn geslepen...<br>De borden hangen klaar...",
+        "Wie gooit de hoogste uitgooi?<br>Wie gooit de eerste 180?!",
+        "🎯 GAME ON!<br>MAY THE BEST OG WIN! 🎯"
+    ];
+
+    let delay = 0;
+    messages.forEach((msg, index) => {
+        setTimeout(() => {
+            hypeBox.style.animation = 'none';
+            hypeBox.offsetHeight; 
+            hypeBox.style.animation = 'bounceIn 0.6s ease forwards';
+            hypeText.innerHTML = msg;
+        }, delay);
+        delay += 3000; 
+    });
+
+    setTimeout(() => {
+        if (state.matches.length === 0) genereerWedstrijden();
+        state.fase = 'poules';
+        saveState(); 
+    }, delay + 1500); 
+}
+// -----------------------------------------------------------
 
 function genereerWedstrijden() {
     state.matches = [];

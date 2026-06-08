@@ -89,6 +89,15 @@ function renderSetup() {
     document.getElementById('start-loting-btn').addEventListener('click', () => {
         const aanwezigen = Array.from(document.querySelectorAll('.speler-check:checked')).map(cb => cb.value);
         if (aanwezigen.length < 4) { alert("Minimaal 4 spelers nodig!"); return; }
+        
+        // --- EXTRA BEVEILIGING VOOR DE LOTING ---
+        let startCode = prompt("Voer de code in om de loting te starten:");
+        if (startCode !== "1403") {
+            alert("❌ Foute code! De loting kan niet gestart worden.");
+            return;
+        }
+        // ----------------------------------------
+
         voerLotingUit(aanwezigen);
     });
 }

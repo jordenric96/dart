@@ -11,23 +11,24 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     margin: 0;
-    padding: 10px; /* Minder witruimte rondom */
+    padding: 10px; 
     background-image: radial-gradient(#d4d4d4 2px, transparent 2px);
     background-size: 20px 20px;
     display: flex;
     flex-direction: column;
     align-items: center; 
-    height: 100vh; /* Zorgt dat het perfect op 1 scherm past */
+    min-height: 100vh; 
     box-sizing: border-box;
+    position: relative; /* Nodig voor de friet-knop in de hoek */
 }
 
 h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase; margin: 5px 0; letter-spacing: 1px; text-align: center; }
 
 .retro-header, .info-item, .card {
     background-color: var(--accent-color);
-    border: 4px solid var(--border-color); /* Iets dunnere randen */
+    border: 4px solid var(--border-color);
     border-radius: 8px;
-    padding: 10px; /* Zwaar verminderde padding */
+    padding: 10px;
     margin-bottom: 10px;
     box-shadow: 4px 4px 0px 0px var(--border-color);
     width: 100%; 
@@ -35,14 +36,14 @@ h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase;
     text-align: center;
 }
 
-.retro-header { max-width: 600px; padding: 15px; }
+.retro-header { max-width: 600px; padding: 15px; margin-top: 30px; }
 .retro-header .title-large { font-size: clamp(1.2rem, 5vw, 2rem); margin: 5px 0; line-height: 1.1; }
 .info-board { width: 100%; display: flex; flex-direction: column; align-items: center; }
 .info-item { font-size: 1.1em; max-width: 300px; padding: 10px; }
 
 #app-container { width: 100%; max-width: 1900px; }
 
-/* 3 Kolommen die het HELE scherm vullen */
+/* 3 Kolommen TV Grid */
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -51,7 +52,7 @@ h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase;
     align-items: start;
 }
 
-/* Knoppen compacter */
+/* Knoppen */
 .retro-button { font-family: 'Alfa Slab One', serif; background-color: var(--highlight-color); color: var(--border-color); border: 3px solid var(--border-color); padding: 5px 15px; font-size: 1em; border-radius: 6px; cursor: pointer; box-shadow: 3px 3px 0px 0px var(--border-color); margin: 5px; }
 .retro-button:active { box-shadow: 0px 0px 0px 0px var(--border-color); transform: translate(3px, 3px); }
 .retro-button.danger { background-color: #ff4d4d; color: white; font-size: 0.8em; }
@@ -60,14 +61,14 @@ h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase;
 .player-checkboxes { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; font-size: 1.2em; margin: 10px 0; max-width: 600px; margin-left: auto; margin-right: auto;}
 .player-checkboxes label { background: #eee; padding: 2px 8px; border: 2px solid var(--border-color); border-radius: 4px; cursor: pointer; }
 
-/* Compacte Tabellen */
+/* Tabellen */
 .retro-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 0.9em; }
 .retro-table th, .retro-table td { border: 2px solid var(--border-color); padding: 2px; text-align: center; }
 .retro-table th { background-color: var(--border-color); color: var(--accent-color); font-family: 'Alfa Slab One', serif; font-size: 0.7em; }
 .punten-cel { font-weight: bold; font-size: 1.1em; background-color: #eee; }
 .stat-table th { background-color: #333; }
 
-/* Compacte Wedstrijden */
+/* Wedstrijden */
 .match-container { border-bottom: 2px dashed #ccc; padding: 5px 0; }
 .match-container:last-child { border-bottom: none; }
 .match-row { display: flex; justify-content: center; align-items: center; font-size: 1em; gap: 5px; margin-bottom: 2px; }
@@ -76,7 +77,6 @@ h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase;
 .match-player.speler2 { text-align: left; }
 .match-inputs { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
 
-/* Kleinere invulvelden */
 .score-input { width: 28px; height: 28px; font-family: 'Alfa Slab One', serif; font-size: 1em; text-align: center; border: 2px solid var(--border-color); border-radius: 4px; }
 .locked-score { font-family: 'Alfa Slab One', serif; font-size: 1.2em; padding: 0 5px; }
 
@@ -95,31 +95,13 @@ h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase;
 .poule-list ul { list-style: none; padding: 0; font-size: 1.1em; margin: 0; }
 .poule-list li { border-bottom: 1px dashed #ccc; padding: 2px 0; }
 
-
-/* --- ZWEVENDE FRIET KNOP & MODAL --- */
-.floating-btn {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background-color: var(--accent-color);
-    border: 4px solid var(--border-color);
-    border-radius: 50px;
-    padding: 15px 25px;
-    font-size: 1.5em;
-    font-family: 'Alfa Slab One', serif;
-    cursor: pointer;
-    box-shadow: 4px 4px 0px 0px var(--border-color);
-    z-index: 100;
-    transition: 0.2s;
-}
-.floating-btn:hover { background-color: var(--highlight-color); transform: scale(1.05); }
-
+/* --- REKENING MODAL --- */
 .modal-overlay {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
     background-color: rgba(0, 0, 0, 0.8);
-    z-index: 200;
-    display: flex;
+    z-index: 9999; /* Zorgt dat hij ALTIJD bovenaan ligt */
+    display: none; /* Verborgen tot je klikt */
     justify-content: center;
     align-items: center;
 }
@@ -131,24 +113,14 @@ h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase;
     border-radius: 5px;
     padding: 30px;
     width: 90%;
-    max-width: 600px;
+    max-width: 500px;
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 10px 10px 0px 0px var(--highlight-color);
-    position: relative;
-    font-family: 'Patrick Hand', cursive;
-}
-
-.receipt-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-    font-size: 1.2em;
     text-align: left;
 }
-.receipt-table th, .receipt-table td {
-    padding: 8px;
-    border-bottom: 2px dashed #999;
-}
-.receipt-table th { font-family: 'Alfa Slab One', serif; font-size: 0.8em; }
-.total-row { font-weight: bold; background-color: #eee; font-size: 1.3em; }
+
+.receipt-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 1.1em; text-align: left; }
+.receipt-table th, .receipt-table td { padding: 8px 4px; border-bottom: 2px dashed #999; }
+.receipt-table th { font-family: 'Alfa Slab One', serif; font-size: 0.8em; border-bottom: 4px solid var(--border-color); }
+.total-row { font-weight: bold; background-color: #eee; font-size: 1.2em; text-align: right;}

@@ -1,3 +1,22 @@
+// --- JOUW DATA VOOR DE REKENING (Later aan te passen) ---
+const financiën = {
+    collectAndGoTotaal: 0.00, // Vul hier later de prijs in (bijv. 145.50)
+    rekeningNummer: "BE00 0000 0000 0000 (Op naam van ...)", 
+    bestellingen: {
+        "Jorden": { item: "Groot pak + Bicky", prijs: 0.00 },
+        "Yarni": { item: "Klein pak + Viandel", prijs: 0.00 },
+        "Joël": { item: "Friet speciaal", prijs: 0.00 },
+        "Vince": { item: "Friet stoofvlees", prijs: 0.00 },
+        "Jessy": { item: "Groot pak + Curryworst", prijs: 0.00 },
+        "Stefaan": { item: "Friet + satékruiden", prijs: 0.00 },
+        "Wim": { item: "Frietje mayo", prijs: 0.00 },
+        "Tibe": { item: "Familiepak", prijs: 0.00 },
+        
+    }
+    
+};
+// --------------------------------------------------------
+
 const alleSpelers = ["Jorden", "Yarni", "Joël", "Vince", "Jessy", "Stefaan", "Wim", "Tibe", "Kristof"];
 
 let state = {
@@ -12,10 +31,17 @@ let state = {
     stats180: []
 };
 
+// DOM Elementen
 const appContainer = document.getElementById('app-container');
 const infoBoard = document.getElementById('info-board');
 const mainHeader = document.getElementById('main-header');
 const resetBtn = document.getElementById('reset-btn');
+
+const frietBtn = document.getElementById('friet-btn');
+const frietModal = document.getElementById('friet-modal');
+const closeModalBtn = document.getElementById('close-modal-btn');
+const rekeningInhoud = document.getElementById('rekening-inhoud');
+const rekeningNummerDisplay = document.getElementById('rekening-nummer-display');
 
 function init() {
     const savedState = localStorage.getItem('dartToernooiState');
@@ -39,18 +65,17 @@ resetBtn.addEventListener('click', () => {
 function render() {
     appContainer.innerHTML = '';
     
-    // Zodra het toernooi start, verbergen we de info én de grote titel!
     if (state.fase === 'setup') {
-        infoBoard.style.display = 'flex';
-        mainHeader.style.display = 'block';
+        if(infoBoard) infoBoard.style.display = 'flex';
+        if(mainHeader) mainHeader.style.display = 'block';
         renderSetup();
     } else if (state.fase === 'loting') {
-        infoBoard.style.display = 'none';
-        mainHeader.style.display = 'block';
+        if(infoBoard) infoBoard.style.display = 'none';
+        if(mainHeader) mainHeader.style.display = 'block';
         renderLoting();
     } else {
-        infoBoard.style.display = 'none';
-        mainHeader.style.display = 'none'; // TITEL WEG VOOR MEER RUIMTE!
+        if(infoBoard) infoBoard.style.display = 'none';
+        if(mainHeader) mainHeader.style.display = 'none'; 
         renderDashboard();
     }
 }
@@ -237,6 +262,11 @@ function generateKnockoutsHTML() {
                 </div>
                 <span class="match-player speler2">${m.speler2}</span>
             </div>
+            <div class="match-extras">
+                <div class="extra-box">CO: <input type="text" class="extra-input co-input data-input" data-id="${m.id}" data-field="co1" data-array="knockouts" value="${m.co1}" ${m.locked ? 'disabled' : ''}> 180: <input type="number" min="0" class="extra-input max-input data-input" data-id="${m.id}" data-field="max1" data-array="knockouts" value="${m.max1}" ${m.locked ? 'disabled' : ''}></div>
+                <strong>|</strong>
+                <div class="extra-box">CO: <input type="text" class="extra-input co-input data-input" data-id="${m.id}" data-field="co2" data-array="knockouts" value="${m.co2}" ${m.locked ? 'disabled' : ''}> 180: <input type="number" min="0" class="extra-input max-input data-input" data-id="${m.id}" data-field="max2" data-array="knockouts" value="${m.max2}" ${m.locked ? 'disabled' : ''}></div>
+            </div>
         </div>`;
     });
     return html + `</div>`;
@@ -320,6 +350,64 @@ function updateFinaleSchema() {
     let hf1 = state.knockouts[0]; let hf2 = state.knockouts[1]; let fin = state.knockouts[2];
     if (hf1.locked) fin.speler1 = hf1.score1 > hf1.score2 ? hf1.speler1 : hf1.speler2; else fin.speler1 = 'Winnaar HF 1';
     if (hf2.locked) fin.speler2 = hf2.score1 > hf2.score2 ? hf2.speler1 : hf2.speler2; else fin.speler2 = 'Winnaar HF 2';
+}
+
+// --- FRIET & REKENING LOGICA ---
+frietBtn.addEventListener('click', () => {
+    genereerRekening();
+    frietModal.style.display = 'flex';
+});
+
+closeModalBtn.addEventListener('click', () => {
+    frietModal.style.display = 'none';
+});
+
+frietModal.addEventListener('click', (e) => {
+    if(e.target === frietModal) frietModal.style.display = 'none';
+});
+
+function genereerRekening() {
+    rekeningNummerDisplay.innerText = financiën.rekeningNummer;
+    
+    let actieveSpelers = [];
+    if (state.poules.A.length > 0 || state.poules.B.length > 0) {
+        actieveSpelers = state.poules.A.concat(state.poules.B);
+    } else if (state.lotingDeelnemers.length > 0) {
+        actieveSpelers = state.lotingDeelnemers;
+    } else {
+        actieveSpelers = alleSpelers; 
+    }
+
+    const aantalSpelers = actieveSpelers.length;
+    const collectGoPerPersoon = aantalSpelers > 0 ? (financiën.collectAndGoTotaal / aantalSpelers) : 0;
+
+    let html = `
+        <p><strong>🛒 Collect & Go Totaal:</strong> €${financiën.collectAndGoTotaal.toFixed(2)}</p>
+        <p><strong>👥 Gedeeld door ${aantalSpelers} spelers:</strong> €${collectGoPerPersoon.toFixed(2)} p.p.</p>
+        
+        <table class="receipt-table">
+            <tr>
+                <th>Speler</th>
+                <th>Frituur Bestelling</th>
+                <th>Te Betalen</th>
+            </tr>
+    `;
+
+    actieveSpelers.forEach(speler => {
+        let bestelling = financiën.bestellingen[speler] || { item: "Geen bestelling", prijs: 0.00 };
+        let totaalPersoon = collectGoPerPersoon + bestelling.prijs;
+        
+        html += `
+            <tr>
+                <td><strong>${speler}</strong></td>
+                <td style="font-size: 0.9em; color: #555;">${bestelling.item}<br>(€${bestelling.prijs.toFixed(2)})</td>
+                <td class="total-row">€${totaalPersoon.toFixed(2)}</td>
+            </tr>
+        `;
+    });
+
+    html += `</table>`;
+    rekeningInhoud.innerHTML = html;
 }
 
 init();

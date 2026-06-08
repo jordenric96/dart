@@ -93,7 +93,7 @@ function renderSetup() {
     });
 }
 
-// --- NIEUWE AUTOMATISCHE LOTING LOGICA ---
+// --- NIEUWE AUTOMATISCHE LOTING LOGICA MET EXTRA SPANNING ---
 function voerLotingUit(spelers) {
     for (let i = spelers.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -121,7 +121,7 @@ function renderLoting() {
         <div class="draw-reveal-big" id="suspense-box">
             <h3 style="margin:0; color: #555;">Speler:</h3>
             <h1 id="spinning-name">Klaarzetten...</h1>
-            <div id="poule-reveal-area" style="display:none;">
+            <div id="poule-reveal-area">
                 <h3 style="margin:10px 0 0 0; color: #555;">Poule:</h3>
                 <h2 id="spinning-poule" style="font-size: 2em; margin: 0; background-color: var(--border-color); color: #fff; display: inline-block; padding: 5px 15px; border-radius: 5px;">?</h2>
             </div>
@@ -143,7 +143,7 @@ function startAutoLotingSequence() {
 
 function trekVolgendeSpeler() {
     if (state.lotingDeelnemers.length === 0) {
-        setTimeout(startHypeSequence, 1000); 
+        setTimeout(startHypeSequence, 1500); 
         return;
     }
 
@@ -156,27 +156,25 @@ function trekVolgendeSpeler() {
 
     const spinName = document.getElementById('spinning-name');
     const spinPoule = document.getElementById('spinning-poule');
-    const pouleRevealArea = document.getElementById('poule-reveal-area');
     
-    pouleRevealArea.style.display = 'none';
+    spinPoule.innerText = '?'; // Voorkomt lay-out sprongen
 
     let cyclesName = 0;
     let intervalName = setInterval(() => {
         spinName.innerText = alleSpelers[Math.floor(Math.random() * alleSpelers.length)];
         cyclesName++;
 
-        if (cyclesName > 12) {
+        if (cyclesName > 25) { // Langer draaien (2.5s)
             clearInterval(intervalName);
             spinName.innerText = speler; 
             
             setTimeout(() => {
-                pouleRevealArea.style.display = 'block';
                 let cyclesPoule = 0;
                 let intervalPoule = setInterval(() => {
                     spinPoule.innerText = (Math.random() > 0.5) ? 'A' : 'B';
                     cyclesPoule++;
 
-                    if (cyclesPoule > 10) {
+                    if (cyclesPoule > 20) { // Poule spanning (2s)
                         clearInterval(intervalPoule);
                         spinPoule.innerText = poule; 
                         
@@ -184,12 +182,12 @@ function trekVolgendeSpeler() {
                         document.getElementById(`poule-${poule}-list`).innerHTML += `<li>${speler}</li>`;
                         saveStateSilent();
 
-                        setTimeout(trekVolgendeSpeler, 1800); 
+                        setTimeout(trekVolgendeSpeler, 2500); // Lange pauze voor reacties
                     }
-                }, 80);
-            }, 600); 
+                }, 100);
+            }, 1000); 
         }
-    }, 80); 
+    }, 100); 
 }
 
 function startHypeSequence() {
@@ -203,6 +201,9 @@ function startHypeSequence() {
     const messages = [
         "🔥 DE POULES ZIJN GEKEND! 🔥",
         "De pijlen zijn geslepen...<br>De borden hangen klaar...",
+        "De rivaliteit is real...<br>Geen genade aan de oche!",
+        "Wie kroont zich tot de allereerste kampioen?!",
+        "Houd de focus scherp...<br>En het bier koud! 🍻",
         "Wie gooit de hoogste uitgooi?<br>Wie gooit de eerste 180?!",
         "🎯 GAME ON!<br>MAY THE BEST OG WIN! 🎯"
     ];
@@ -215,7 +216,7 @@ function startHypeSequence() {
             hypeBox.style.animation = 'bounceIn 0.6s ease forwards';
             hypeText.innerHTML = msg;
         }, delay);
-        delay += 3000; 
+        delay += 3500; // Verhoogd naar 3.5 seconden per blokje
     });
 
     setTimeout(() => {

@@ -1,4 +1,4 @@
-// --- JOUW DATA VOOR DE REKENING (Kristof is verwijderd) ---
+// --- JOUW DATA VOOR DE REKENING ---
 const financiën = {
     collectAndGoTotaal: 0.00, // Vul hier later de prijs in
     rekeningNummer: "BE00 0000 0000 0000 (Op naam van ...)", 
@@ -15,7 +15,6 @@ const financiën = {
 };
 // --------------------------------------------------------
 
-// Kristof is verwijderd. We hebben nu exact 8 spelers.
 const alleSpelers = ["Jorden", "Yarni", "Joël", "Vince", "Jessy", "Stefaan", "Wim", "Tibe"];
 
 let state = {
@@ -36,11 +35,17 @@ const infoBoard = document.getElementById('info-board');
 const mainHeader = document.getElementById('main-header');
 const resetBtn = document.getElementById('reset-btn');
 
+const frietBtn = document.getElementById('friet-btn');
+const frietModal = document.getElementById('friet-modal');
+const closeModalBtn = document.getElementById('close-modal-btn');
+const rekeningInhoud = document.getElementById('rekening-inhoud');
+const rekeningNummerDisplay = document.getElementById('rekening-nummer-display');
+
 function init() {
     const savedState = localStorage.getItem('dartToernooiState');
     if (savedState) state = JSON.parse(savedState);
     render();
-    setupFrietModal(); // Laad de rekening functionaliteit in
+    setupFrietModal();
 }
 
 function saveState() {
@@ -77,7 +82,6 @@ function render() {
 function renderSetup() {
     let html = `<div class="card" style="max-width: 600px; margin: 0 auto;"><h2>Wie is er aanwezig?</h2><div class="player-checkboxes">`;
     alleSpelers.forEach(speler => {
-        // Alle 8 standaard aangevinkt
         html += `<label><input type="checkbox" class="speler-check" value="${speler}" checked> ${speler}</label>`;
     });
     html += `</div><button id="start-loting-btn" class="retro-button">🎯 Start De Loting!</button></div>`;
@@ -107,18 +111,28 @@ function renderLoting() {
     let html = `<div class="card" style="margin: 0 auto; max-width: 600px;"><h2>🏆 DE POT 🏆</h2>`;
 
     if (state.huidigeTrekking) {
+        // Wat we zien als een speler + poule volledig getrokken is
         html += `<div class="draw-reveal-big">
-                    <h3 style="margin:0; color: #555;">Getrokken:</h3>
+                    <h3 style="margin:0; color: #555;">Speler:</h3>
                     <h1>${state.huidigeTrekking.naam}</h1>
-                    <h2>➡️ POULE ${state.huidigeTrekking.poule}</h2>
+                    <h3 style="margin:10px 0 0 0; color: #555;">Poule:</h3>
+                    <h2 style="font-size: 2em; margin: 0; background-color: var(--border-color); color: #fff; display: inline-block; padding: 5px 15px; border-radius: 5px;">${state.huidigeTrekking.poule}</h2>
                  </div>`;
     } else {
-        html += `<div class="draw-reveal-big" id="suspense-box" style="display:none;"><h1 id="spinning-name">???</h1></div>
+        // Startscherm van de loting
+        html += `<div class="draw-reveal-big" id="suspense-box" style="display:none;">
+                    <h3 style="margin:0; color: #555;">Speler:</h3>
+                    <h1 id="spinning-name">???</h1>
+                    <div id="poule-reveal-area" style="display:none;">
+                        <h3 style="margin:10px 0 0 0; color: #555;">Poule:</h3>
+                        <h2 id="spinning-poule" style="font-size: 2em; margin: 0; background-color: var(--border-color); color: #fff; display: inline-block; padding: 5px 15px; border-radius: 5px;">?</h2>
+                    </div>
+                 </div>
                  <p id="loting-intro">De namen zitten in de koker!</p>`;
     }
 
     if (state.lotingDeelnemers.length > 0) {
-        html += `<button id="trek-btn" class="retro-button">🎲 Trek Speler (${state.lotingDeelnemers.length})</button>`;
+        html += `<button id="trek-btn" class="retro-button" style="font-size: 1.3em; padding: 10px 20px;">🎲 Trek Speler (${state.lotingDeelnemers.length})</button>`;
     } else {
         html += `<div class="alert" style="padding: 10px; margin: 10px 0; border: 2px solid var(--border-color);"><h3>✅ Poules bekend!</h3></div><button id="naar-poules-btn" class="retro-button">Let's Play Darts! ➡️</button>`;
     }
@@ -136,26 +150,56 @@ function renderLoting() {
             if(document.getElementById('loting-intro')) document.getElementById('loting-intro').style.display = 'none';
             
             let suspenseBox = document.getElementById('suspense-box');
-            if(!suspenseBox) {
-                 suspenseBox = document.createElement('div');
-                 suspenseBox.className = 'draw-reveal-big';
-                 suspenseBox.innerHTML = '<h1 id="spinning-name">???</h1>';
-                 this.parentNode.insertBefore(suspenseBox, this);
+            if(suspenseBox) {
+                suspenseBox.style.display = 'block';
+                document.getElementById('poule-reveal-area').style.display = 'none'; // Verberg poule deel eerst
             }
-            suspenseBox.style.display = 'block';
-            let spinName = document.getElementById('spinning-name');
             
-            let cycles = 0;
-            let interval = setInterval(() => {
+            let spinName = document.getElementById('spinning-name');
+            let spinPoule = document.getElementById('spinning-poule');
+            
+            // FASE 1: SPELER TREKKEN (Draait 1.5 seconden)
+            let cyclesName = 0;
+            let intervalName = setInterval(() => {
                 spinName.innerText = state.lotingDeelnemers[Math.floor(Math.random() * state.lotingDeelnemers.length)];
-                cycles++;
-                if(cycles > 15) {
-                    clearInterval(interval);
-                    const speler = state.lotingDeelnemers.shift();
-                    const poule = (state.poules.A.length <= state.poules.B.length) ? 'A' : 'B';
-                    state.poules[poule].push(speler);
-                    state.huidigeTrekking = { naam: speler, poule: poule };
-                    saveState();
+                cyclesName++;
+                
+                if(cyclesName > 15) {
+                    clearInterval(intervalName);
+                    // Haal de getrokken speler officieel uit de pot
+                    const speler = state.lotingDeelnemers.shift(); 
+                    spinName.innerText = speler; // Laat hem staan
+
+                    // FASE 2: KORTE PAUZE, DAN POULE TREKKEN
+                    setTimeout(() => {
+                        document.getElementById('poule-reveal-area').style.display = 'block';
+                        
+                        // Kijk welke poules nog plaats hebben (max 4 per poule)
+                        let validPoules = [];
+                        if (state.poules.A.length < 4) validPoules.push('A');
+                        if (state.poules.B.length < 4) validPoules.push('B');
+
+                        let cyclesPoule = 0;
+                        let intervalPoule = setInterval(() => {
+                            // Wissel snel tussen A en B voor het effect
+                            spinPoule.innerText = (Math.random() > 0.5) ? 'A' : 'B'; 
+                            cyclesPoule++;
+                            
+                            if (cyclesPoule > 15) {
+                                clearInterval(intervalPoule);
+                                // Kies ECHT een poule uit de beschikbare opties
+                                const poule = validPoules[Math.floor(Math.random() * validPoules.length)];
+                                spinPoule.innerText = poule;
+                                
+                                // FASE 3: OPSLAAN EN RESULTAAT LATEN ZIEN
+                                state.poules[poule].push(speler);
+                                state.huidigeTrekking = { naam: speler, poule: poule };
+                                
+                                setTimeout(() => { saveState(); }, 1200); // 1.2s wachten voor de pagina ververst
+                            }
+                        }, 80); // Poule draait ietsjes sneller
+
+                    }, 800); // Wacht 0.8s tussen speler en poule animatie
                 }
             }, 100);
         });

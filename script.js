@@ -33,10 +33,13 @@ function init() {
     setupFrietModal();
 }
 
-function saveState() {
+function saveState(skipRender = false) {
     localStorage.setItem('dartToernooiState', JSON.stringify(state));
-    render();
+    if(!skipRender) render();
 }
+
+// Handig hulpje om animaties te pauzeren in JavaScript
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 resetBtn.addEventListener('click', () => {
     if(confirm("Weet je zeker dat je ALLES wilt wissen?")) {
@@ -56,13 +59,13 @@ function render() {
         renderSetup();
     } else if (state.fase === 'loting') {
         if(infoBoard) infoBoard.style.display = 'none';
-        if(mainHeader) mainHeader.style.display = 'none'; // Header direct weg voor Full Screen Loting
+        if(mainHeader) mainHeader.style.display = 'none'; 
         if(resetZone) resetZone.style.display = 'block';
         renderLoting();
     } else {
         if(infoBoard) infoBoard.style.display = 'none';
         if(mainHeader) mainHeader.style.display = 'none'; 
-        if(resetZone) resetZone.style.display = 'none'; // Reset knop ook weg om plaats te besparen op dashboard
+        if(resetZone) resetZone.style.display = 'none'; 
         renderDashboard();
     }
 }
@@ -78,6 +81,14 @@ function renderSetup() {
     document.getElementById('start-loting-btn').addEventListener('click', () => {
         const aanwezigen = Array.from(document.querySelectorAll('.speler-check:checked')).map(cb => cb.value);
         if (aanwezigen.length < 4) { alert("Minimaal 4 spelers!"); return; }
+        
+        // --- DE BEVEILIGINGSCODE ---
+        let code = prompt("Voer de startcode in om het toernooi te beginnen:");
+        if (code !== "1403") { 
+            alert("❌ Foutieve code!"); 
+            return; 
+        }
+
         voerLotingUit(aanwezigen);
     });
 }
@@ -98,91 +109,33 @@ function voerLotingUit(spelers) {
 function renderLoting() {
     let html = `<div style="width: 100%; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center;">`;
 
-    if (state.huidigeTrekking) {
-        html += `<div class="loting-mega-box">
-                    <h3>SPELER:</h3>
-                    <h1>${state.huidigeTrekking.naam}</h1>
+    // We bouwen direct de structuur op voor de geautomatiseerde show
+    html += `<div class="loting-mega-box" id="intro-box" style="display: none;">
+                <h1>DE PIJLEN ZIJN GESLEPEN...<br><br>DE BORDEN HANGEN KLAAR...</h1>
+             </div>
+             <div class="loting-mega-box" id="suspense-box" style="display:none;">
+                <h3>SPELER:</h3>
+                <h1 id="spinning-name">???</h1>
+                <div id="poule-reveal-area" style="display:none; width: 100%;">
                     <h3 style="margin-top: 2vh;">POULE:</h3>
-                    <div class="loting-poule-box">${state.huidigeTrekking.poule}</div>
-                 </div>`;
-    } else {
-        html += `<div class="loting-mega-box" id="intro-box">
-                    <h1>DE PIJLEN ZIJN GESLEPEN...<br><br>DE BORDEN HANGEN KLAAR...</h1>
-                 </div>
-                 <div class="loting-mega-box" id="suspense-box" style="display:none;">
-                    <h3>SPELER:</h3>
-                    <h1 id="spinning-name">???</h1>
-                    <div id="poule-reveal-area" style="display:none; width: 100%;">
-                        <h3 style="margin-top: 2vh;">POULE:</h3>
-                        <div id="spinning-poule" class="loting-poule-box" style="width: fit-content; margin: 0 auto;">?</div>
-                    </div>
-                 </div>`;
-    }
+                    <div id="spinning-poule" class="loting-poule-box" style="width: fit-content; margin: 0 auto;">?</div>
+                </div>
+             </div>`;
 
-    if (state.lotingDeelnemers.length > 0) {
-        html += `<div><button id="trek-btn" class="retro-button" style="font-size: clamp(1.5rem, 4vw, 2.5rem); padding: 2vh 4vw; margin-top: 2vh;">🎲 Trek Speler (${state.lotingDeelnemers.length})</button></div>`;
-    } else {
-        html += `<div><button id="naar-poules-btn" class="retro-button" style="font-size: clamp(1.5rem, 4vw, 2.5rem); padding: 2vh 4vw; margin-top: 2vh; background-color: #4CAF50; color: white;">🏆 Let's Play Darts! ➡️</button></div>`;
-    }
-
+    // Deze lijsten updaten we later handmatig via ID's
     html += `<div style="display:flex; justify-content:space-around; margin-top: 3vh; width: 100%; max-width: 1200px; margin-left: auto; margin-right: auto;">
-                <div class="poule-list"><h3>POULE A</h3><ul>${state.poules.A.map(s => `<li>${s}</li>`).join('')}</ul></div>
-                <div class="poule-list"><h3>POULE B</h3><ul>${state.poules.B.map(s => `<li>${s}</li>`).join('')}</ul></div>
+                <div class="poule-list"><h3>POULE A</h3><ul id="poule-a-list">${state.poules.A.map(s => `<li>${s}</li>`).join('')}</ul></div>
+                <div class="poule-list"><h3>POULE B</h3><ul id="poule-b-list">${state.poules.B.map(s => `<li>${s}</li>`).join('')}</ul></div>
              </div></div>`;
 
     appContainer.innerHTML = html;
 
+    // Start de automatische show of laat de "Klaar" knop zien als we refreshen na de loting
     if (state.lotingDeelnemers.length > 0) {
-        document.getElementById('trek-btn').addEventListener('click', function() {
-            this.style.display = 'none';
-            let introBox = document.getElementById('intro-box');
-            if(introBox) introBox.style.display = 'none';
-            
-            let suspenseBox = document.getElementById('suspense-box');
-            suspenseBox.style.display = 'flex';
-            document.getElementById('poule-reveal-area').style.display = 'none'; 
-            
-            let spinName = document.getElementById('spinning-name');
-            let spinPoule = document.getElementById('spinning-poule');
-            
-            let cyclesName = 0;
-            let intervalName = setInterval(() => {
-                spinName.innerText = state.lotingDeelnemers[Math.floor(Math.random() * state.lotingDeelnemers.length)];
-                cyclesName++;
-                
-                if(cyclesName > 15) {
-                    clearInterval(intervalName);
-                    const speler = state.lotingDeelnemers.shift(); 
-                    spinName.innerText = speler; 
-
-                    setTimeout(() => {
-                        document.getElementById('poule-reveal-area').style.display = 'block';
-                        
-                        let validPoules = [];
-                        if (state.poules.A.length < 4) validPoules.push('A');
-                        if (state.poules.B.length < 4) validPoules.push('B');
-
-                        let cyclesPoule = 0;
-                        let intervalPoule = setInterval(() => {
-                            spinPoule.innerText = (Math.random() > 0.5) ? 'A' : 'B'; 
-                            cyclesPoule++;
-                            
-                            if (cyclesPoule > 15) {
-                                clearInterval(intervalPoule);
-                                const poule = validPoules[Math.floor(Math.random() * validPoules.length)];
-                                spinPoule.innerText = poule;
-                                
-                                state.poules[poule].push(speler);
-                                state.huidigeTrekking = { naam: speler, poule: poule };
-                                
-                                setTimeout(() => { saveState(); }, 1200);
-                            }
-                        }, 80);
-                    }, 800);
-                }
-            }, 100);
-        });
+        startAutomatischeLoting();
     } else {
+        document.getElementById('suspense-box').style.display = 'flex';
+        document.getElementById('suspense-box').innerHTML = `<h1>✅ Alle poules zijn bekend!</h1><button id="naar-poules-btn" class="retro-button" style="font-size: clamp(1.5rem, 4vw, 2.5rem); padding: 2vh 4vw; margin-top: 2vh; background-color: #4CAF50; color: white;">🏆 Let's Play Darts! ➡️</button>`;
         document.getElementById('naar-poules-btn').addEventListener('click', () => {
             if (state.matches.length === 0) genereerWedstrijden();
             state.fase = 'poules';
@@ -190,6 +143,90 @@ function renderLoting() {
         });
     }
 }
+
+// --- DE AUTOMATISCHE LOTING SHOW ---
+async function startAutomatischeLoting() {
+    let introBox = document.getElementById('intro-box');
+    let suspenseBox = document.getElementById('suspense-box');
+
+    // Toon de introductie tekst 3 seconden
+    introBox.style.display = 'flex';
+    await sleep(3500); 
+
+    introBox.style.display = 'none';
+    suspenseBox.style.display = 'flex';
+
+    // Loop door alle spelers heen
+    while (state.lotingDeelnemers.length > 0) {
+        await trekEenSpeler();
+        await sleep(1500); // Korte pauze tussen twee spelers
+    }
+
+    // Alles is getrokken!
+    suspenseBox.innerHTML = `<h1>✅ Alle poules zijn bekend!</h1><button id="naar-poules-btn" class="retro-button" style="font-size: clamp(1.5rem, 4vw, 2.5rem); padding: 2vh 4vw; margin-top: 2vh; background-color: #4CAF50; color: white;">🏆 Let's Play Darts! ➡️</button>`;
+    
+    document.getElementById('naar-poules-btn').addEventListener('click', () => {
+        if (state.matches.length === 0) genereerWedstrijden();
+        state.fase = 'poules';
+        saveState();
+    });
+}
+
+function trekEenSpeler() {
+    return new Promise(resolve => {
+        document.getElementById('poule-reveal-area').style.display = 'none';
+        let spinName = document.getElementById('spinning-name');
+        let spinPoule = document.getElementById('spinning-poule');
+        spinName.innerText = "???";
+
+        let cyclesName = 0;
+        let intervalName = setInterval(() => {
+            spinName.innerText = state.lotingDeelnemers[Math.floor(Math.random() * state.lotingDeelnemers.length)];
+            cyclesName++;
+            
+            // Na 1.5 seconde draaien stopt hij op de naam
+            if(cyclesName > 15) {
+                clearInterval(intervalName);
+                const speler = state.lotingDeelnemers.shift(); 
+                spinName.innerText = speler; 
+
+                // Wacht een beetje en draai dan voor de poule
+                setTimeout(() => {
+                    document.getElementById('poule-reveal-area').style.display = 'block';
+                    
+                    let validPoules = [];
+                    if (state.poules.A.length < 4) validPoules.push('A');
+                    if (state.poules.B.length < 4) validPoules.push('B');
+                    if (validPoules.length === 0) validPoules = ['A', 'B']; // Fallback
+
+                    let cyclesPoule = 0;
+                    let intervalPoule = setInterval(() => {
+                        spinPoule.innerText = (Math.random() > 0.5) ? 'A' : 'B'; 
+                        cyclesPoule++;
+                        
+                        // Na 1.2 seconden draaien stopt hij op de poule
+                        if (cyclesPoule > 15) {
+                            clearInterval(intervalPoule);
+                            const poule = validPoules[Math.floor(Math.random() * validPoules.length)];
+                            spinPoule.innerText = poule;
+                            
+                            state.poules[poule].push(speler);
+                            state.huidigeTrekking = { naam: speler, poule: poule };
+                            
+                            // Visual update (Zonder de pagina volledig te herladen, want anders breekt de animatie!)
+                            document.getElementById('poule-a-list').innerHTML = state.poules.A.map(s => `<li>${s}</li>`).join('');
+                            document.getElementById('poule-b-list').innerHTML = state.poules.B.map(s => `<li>${s}</li>`).join('');
+                            
+                            saveState(true); // Sla op, maar herlaad de pagina NIET.
+                            resolve(); // Laat de loop weten dat deze beurt klaar is
+                        }
+                    }, 80);
+                }, 800);
+            }
+        }, 100);
+    });
+}
+// -----------------------------------
 
 function genereerWedstrijden() {
     state.matches = [];
@@ -318,7 +355,12 @@ function handleDataChange(input) {
     const id = input.getAttribute('data-id'); const field = input.getAttribute('data-field'); const arrayName = input.getAttribute('data-array');
     const targetArray = state[arrayName]; const match = targetArray.find(m => m.id === id);
     if (field.includes('score')) match[field] = input.value === '' ? null : parseInt(input.value); else match[field] = input.value;
-    saveState();
+    saveState(true); // Sla op zonder rerender, de vinkjes knop fixen we visueel
+    
+    // Zorg ervoor dat de ✅ knop verschijnt als beide scores zijn ingevuld
+    if(match.score1 !== null && match.score2 !== null) {
+        saveState(); // Nu wel rerenderen om de knop te tonen
+    }
 }
 
 function toggleLock(btn, lockStatus) {

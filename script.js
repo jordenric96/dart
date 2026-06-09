@@ -38,7 +38,6 @@ function saveState(skipRender = false) {
     if(!skipRender) render();
 }
 
-// Handig hulpje om animaties te pauzeren in JavaScript
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 resetBtn.addEventListener('click', () => {
@@ -82,12 +81,8 @@ function renderSetup() {
         const aanwezigen = Array.from(document.querySelectorAll('.speler-check:checked')).map(cb => cb.value);
         if (aanwezigen.length < 4) { alert("Minimaal 4 spelers!"); return; }
         
-        // --- DE BEVEILIGINGSCODE ---
         let code = prompt("Voer de startcode in om het toernooi te beginnen:");
-        if (code !== "1403") { 
-            alert("❌ Foutieve code!"); 
-            return; 
-        }
+        if (code !== "1403") { alert("❌ Foutieve code!"); return; }
 
         voerLotingUit(aanwezigen);
     });
@@ -109,20 +104,27 @@ function voerLotingUit(spelers) {
 function renderLoting() {
     let html = `<div style="width: 100%; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center;">`;
 
-    // We bouwen direct de structuur op voor de geautomatiseerde show
-    html += `<div class="loting-mega-box" id="intro-box" style="display: none;">
-                <h1>DE PIJLEN ZIJN GESLEPEN...<br><br>DE BORDEN HANGEN KLAAR...</h1>
-             </div>
-             <div class="loting-mega-box" id="suspense-box" style="display:none;">
-                <h3>SPELER:</h3>
-                <h1 id="spinning-name">???</h1>
-                <div id="poule-reveal-area" style="display:none; width: 100%;">
-                    <h3 style="margin-top: 2vh;">POULE:</h3>
-                    <div id="spinning-poule" class="loting-poule-box" style="width: fit-content; margin: 0 auto;">?</div>
+    // De basis kaders voor de effecten
+    html += `<div class="loting-mega-box" id="cinematic-box">
+                <div class="spotlight left" id="sl-l"></div>
+                <div class="spotlight right" id="sl-r"></div>
+                <div class="firework-flash fw-1" id="fw1"></div>
+                <div class="firework-flash fw-2" id="fw2"></div>
+                <div class="firework-flash fw-3" id="fw3"></div>
+                <div class="vague-names-bg" id="vague-names-area"></div>
+                
+                <h1 id="cinematic-text">DE PIJLEN ZIJN GESLEPEN...<br><br>DE BORDEN HANGEN KLAAR...</h1>
+                
+                <div id="koker-content" style="display:none; width:100%;">
+                    <h3>SPELER:</h3>
+                    <h1 id="spinning-name">???</h1>
+                    <div id="poule-reveal-area" style="display:none; width: 100%;">
+                        <h3>POULE:</h3>
+                        <div id="spinning-poule" class="loting-poule-box" style="width: fit-content; margin: 0 auto;">?</div>
+                    </div>
                 </div>
              </div>`;
 
-    // Deze lijsten updaten we later handmatig via ID's
     html += `<div style="display:flex; justify-content:space-around; margin-top: 3vh; width: 100%; max-width: 1200px; margin-left: auto; margin-right: auto;">
                 <div class="poule-list"><h3>POULE A</h3><ul id="poule-a-list">${state.poules.A.map(s => `<li>${s}</li>`).join('')}</ul></div>
                 <div class="poule-list"><h3>POULE B</h3><ul id="poule-b-list">${state.poules.B.map(s => `<li>${s}</li>`).join('')}</ul></div>
@@ -130,12 +132,17 @@ function renderLoting() {
 
     appContainer.innerHTML = html;
 
-    // Start de automatische show of laat de "Klaar" knop zien als we refreshen na de loting
     if (state.lotingDeelnemers.length > 0) {
-        startAutomatischeLoting();
+        startAudioEnTijdlijn();
     } else {
-        document.getElementById('suspense-box').style.display = 'flex';
-        document.getElementById('suspense-box').innerHTML = `<h1>✅ Alle poules zijn bekend!</h1><button id="naar-poules-btn" class="retro-button" style="font-size: clamp(1.5rem, 4vw, 2.5rem); padding: 2vh 4vw; margin-top: 2vh; background-color: #4CAF50; color: white;">🏆 Let's Play Darts! ➡️</button>`;
+        // Fallback als de loting al klaar was bij het herladen
+        let cBox = document.getElementById('cinematic-box');
+        document.getElementById('cinematic-text').style.display = 'none';
+        document.getElementById('koker-content').style.display = 'block';
+        document.getElementById('poule-reveal-area').style.display = 'block';
+        document.getElementById('spinning-name').innerText = "LOTING KLAAR";
+        document.getElementById('spinning-poule').innerText = "✓";
+        cBox.innerHTML += `<button id="naar-poules-btn" class="retro-button" style="font-size: clamp(1.5rem, 4vw, 2.5rem); padding: 2vh 4vw; margin-top: 2vh; background-color: #4CAF50; color: white;">🏆 Let's Play Darts! ➡️</button>`;
         document.getElementById('naar-poules-btn').addEventListener('click', () => {
             if (state.matches.length === 0) genereerWedstrijden();
             state.fase = 'poules';
@@ -144,26 +151,71 @@ function renderLoting() {
     }
 }
 
-// --- DE AUTOMATISCHE LOTING SHOW ---
-async function startAutomatischeLoting() {
-    let introBox = document.getElementById('intro-box');
-    let suspenseBox = document.getElementById('suspense-box');
+// --- DE SUPER TIJDLIJN MET MUZIEK ---
+async function startAudioEnTijdlijn() {
+    const audio = new Audio('song.mp3');
+    audio.play().catch(e => console.log("Muziek kon niet automatisch starten door browserbeveiliging."));
 
-    // Toon de introductie tekst 3 seconden
-    introBox.style.display = 'flex';
-    await sleep(3500); 
+    const vNamesArea = document.getElementById('vague-names-area');
+    const cinText = document.getElementById('cinematic-text');
+    const kokerContent = document.getElementById('koker-content');
+    const spinName = document.getElementById('spinning-name');
+    const spinPoule = document.getElementById('spinning-poule');
 
-    introBox.style.display = 'none';
-    suspenseBox.style.display = 'flex';
-
-    // Loop door alle spelers heen
-    while (state.lotingDeelnemers.length > 0) {
-        await trekEenSpeler();
-        await sleep(1500); // Korte pauze tussen twee spelers
+    // Genereer wazige achtergrondnamen uit de echte deelnemers
+    if (vNamesArea) {
+        vNamesArea.innerHTML = state.lotingDeelnemers.map(s => `<span>${s}</span>`).join('') + state.lotingDeelnemers.map(s => `<span>${s}</span>`).join('');
     }
 
-    // Alles is getrokken!
-    suspenseBox.innerHTML = `<h1>✅ Alle poules zijn bekend!</h1><button id="naar-poules-btn" class="retro-button" style="font-size: clamp(1.5rem, 4vw, 2.5rem); padding: 2vh 4vw; margin-top: 2vh; background-color: #4CAF50; color: white;">🏆 Let's Play Darts! ➡️</button>`;
+    // [0 - 20 SECONDEN]: Zwart scherm met spotlights, vuurwerk en vage namen (loopt via CSS)
+    await sleep(20000);
+
+    // [20 - 26 SECONDEN]: Introtekst wijzigt naar de opbouw-hype tekst
+    if (cinText) cinText.innerHTML = "MAAK JULLIE KLAAR...";
+    await sleep(6000); 
+
+    // [26 SECONDEN]: Namen beginnen direct supersnel te ratelen/scrambelen!
+    if (cinText) cinText.style.display = 'none';
+    if (kokerContent) kokerContent.style.display = 'block';
+
+    // Start direct de visuele koker-animatie
+    let intervalName = setInterval(() => {
+        spinName.innerText = state.lotingDeelnemers[Math.floor(Math.random() * state.lotingDeelnemers.length)];
+    }, 70);
+
+    // [26 -> 32.5 SECONDEN]: Ratelen gedurende exact 6.5 seconden tot de climax
+    await sleep(6500); 
+    clearInterval(intervalName); // Stop het ratelen precies op 32.5 seconden!
+
+    // Trek de ALLEREERSTE speler exact op 32,5 seconden
+    const eersteSpeler = state.lotingDeelnemers.shift();
+    spinName.innerText = eersteSpeler;
+
+    // Direct poule bepalen voor de eerste speler
+    document.getElementById('poule-reveal-area').style.display = 'block';
+    let validPoules = ['A', 'B'];
+    const eerstePoule = validPoules[Math.floor(Math.random() * validPoules.length)];
+    spinPoule.innerText = eerstePoule;
+
+    // Voeg toe en update de visuele lijst onderaan direct
+    state.poules[eerstePoule].push(eersteSpeler);
+    document.getElementById('poule-a-list').innerHTML = state.poules.A.map(s => `<li>${s}</li>`).join('');
+    document.getElementById('poule-b-list').innerHTML = state.poules.B.map(s => `<li>${s}</li>`).join('');
+    saveState(true);
+
+    // Wacht 2 seconden om te genieten van de eerste trekking
+    await sleep(2500);
+
+    // --- VERVOLG VAN DE LOTING ---
+    // De rest van de 7 spelers wordt volautomatisch getrokken terwijl de muziek doorloopt
+    while (state.lotingDeelnemers.length > 0) {
+        await trekAutomatischVolgendeSpeler();
+        await sleep(1500); // Pauze tussen spelers
+    }
+
+    // Alles klaar! Toon de grote groene knop om naar het toernooi te gaan
+    document.getElementById('poule-reveal-area').style.display = 'block';
+    document.getElementById('koker-content').innerHTML = `<h1>✅ Alle poules zijn bekend!</h1><button id="naar-poules-btn" class="retro-button" style="font-size: clamp(1.5rem, 4vw, 2.5rem); padding: 2vh 4vw; margin-top: 2vh; background-color: #4CAF50; color: white;">🏆 Let's Play Darts! ➡️</button>`;
     
     document.getElementById('naar-poules-btn').addEventListener('click', () => {
         if (state.matches.length === 0) genereerWedstrijden();
@@ -172,7 +224,8 @@ async function startAutomatischeLoting() {
     });
 }
 
-function trekEenSpeler() {
+// Functie voor de overige 7 spelers (kortere, vloeiende animatie)
+function trekAutomatischVolgendeSpeler() {
     return new Promise(resolve => {
         document.getElementById('poule-reveal-area').style.display = 'none';
         let spinName = document.getElementById('spinning-name');
@@ -184,48 +237,43 @@ function trekEenSpeler() {
             spinName.innerText = state.lotingDeelnemers[Math.floor(Math.random() * state.lotingDeelnemers.length)];
             cyclesName++;
             
-            // Na 1.5 seconde draaien stopt hij op de naam
-            if(cyclesName > 15) {
+            if(cyclesName > 12) {
                 clearInterval(intervalName);
                 const speler = state.lotingDeelnemers.shift(); 
                 spinName.innerText = speler; 
 
-                // Wacht een beetje en draai dan voor de poule
                 setTimeout(() => {
                     document.getElementById('poule-reveal-area').style.display = 'block';
                     
                     let validPoules = [];
                     if (state.poules.A.length < 4) validPoules.push('A');
                     if (state.poules.B.length < 4) validPoules.push('B');
-                    if (validPoules.length === 0) validPoules = ['A', 'B']; // Fallback
 
                     let cyclesPoule = 0;
                     let intervalPoule = setInterval(() => {
                         spinPoule.innerText = (Math.random() > 0.5) ? 'A' : 'B'; 
                         cyclesPoule++;
                         
-                        // Na 1.2 seconden draaien stopt hij op de poule
-                        if (cyclesPoule > 15) {
+                        if (cyclesPoule > 12) {
                             clearInterval(intervalPoule);
                             const poule = validPoules[Math.floor(Math.random() * validPoules.length)];
                             spinPoule.innerText = poule;
                             
                             state.poules[poule].push(speler);
-                            state.huidigeTrekking = { naam: speler, poule: poule };
                             
-                            // Visual update (Zonder de pagina volledig te herladen, want anders breekt de animatie!)
                             document.getElementById('poule-a-list').innerHTML = state.poules.A.map(s => `<li>${s}</li>`).join('');
                             document.getElementById('poule-b-list').innerHTML = state.poules.B.map(s => `<li>${s}</li>`).join('');
                             
-                            saveState(true); // Sla op, maar herlaad de pagina NIET.
-                            resolve(); // Laat de loop weten dat deze beurt klaar is
+                            saveState(true);
+                            resolve(); 
                         }
-                    }, 80);
-                }, 800);
+                    }, 70);
+                }, 500);
             }
-        }, 100);
+        }, 80);
     });
 }
+
 // -----------------------------------
 
 function genereerWedstrijden() {
@@ -355,11 +403,10 @@ function handleDataChange(input) {
     const id = input.getAttribute('data-id'); const field = input.getAttribute('data-field'); const arrayName = input.getAttribute('data-array');
     const targetArray = state[arrayName]; const match = targetArray.find(m => m.id === id);
     if (field.includes('score')) match[field] = input.value === '' ? null : parseInt(input.value); else match[field] = input.value;
-    saveState(true); // Sla op zonder rerender, de vinkjes knop fixen we visueel
+    saveState(true); 
     
-    // Zorg ervoor dat de ✅ knop verschijnt als beide scores zijn ingevuld
     if(match.score1 !== null && match.score2 !== null) {
-        saveState(); // Nu wel rerenderen om de knop te tonen
+        saveState(); 
     }
 }
 

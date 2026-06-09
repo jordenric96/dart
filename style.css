@@ -17,14 +17,13 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center; 
-    height: 100vh; /* Dwingt alles binnen 1 schermhoogte */
-    overflow: hidden; /* Geen scrollbalken meer! */
+    height: 100vh;
+    overflow: hidden; 
     box-sizing: border-box;
 }
 
 h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase; margin: 0.5vh 0; letter-spacing: 1px; text-align: center; }
 
-/* Kaders */
 .retro-header, .info-item, .card {
     background-color: var(--accent-color);
     border: 4px solid var(--border-color);
@@ -37,14 +36,12 @@ h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase;
     text-align: center;
 }
 
-/* Dynamische header scaling */
 .retro-header { max-width: 600px; padding: 2vh 2vw; }
 .retro-header .title-small { font-size: clamp(1rem, 3vh, 1.5rem); }
 .retro-header .title-large { font-size: clamp(1.5rem, 6vw, 2.5rem); margin: 0.5vh 0; line-height: 1; }
 .retro-header h3 { font-size: clamp(0.8rem, 2vh, 1.2rem); }
 .friet-knop { background-color: var(--highlight-color); font-size: clamp(1rem, 2.5vh, 1.5rem) !important; padding: 1vh 2vw !important; margin-top: 1vh !important; }
 
-/* Startscherm elementen */
 .info-board { width: 100%; display: flex; flex-direction: column; align-items: center; flex: 1; justify-content: center; }
 .info-row { display: flex; gap: 1vw; justify-content: center; width: 100%; max-width: 800px; }
 .info-item { font-size: clamp(0.9rem, 2vh, 1.2rem); flex: 1; }
@@ -53,18 +50,10 @@ h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase;
 
 #app-container { width: 100%; max-width: 1800px; height: 100%; display: flex; flex-direction: column; justify-content: center; }
 
-/* 3 Kolommen TV Grid die in hoogte comprimeert */
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1vw;
-    width: 100%;
-    height: 96vh;
-}
+.dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1vw; width: 100%; height: 96vh; }
 .grid-col { display: flex; flex-direction: column; height: 100%; }
 .grid-col .card { flex: 1; display: flex; flex-direction: column; margin-bottom: 0; overflow: hidden; }
 
-/* Knoppen */
 .retro-button { font-family: 'Alfa Slab One', serif; background-color: var(--highlight-color); color: var(--border-color); border: 3px solid var(--border-color); padding: 0.5vh 1vw; font-size: clamp(0.8rem, 2vh, 1.2rem); border-radius: 6px; cursor: pointer; box-shadow: 3px 3px 0px 0px var(--border-color); }
 .retro-button:active { box-shadow: 0px 0px 0px 0px var(--border-color); transform: translate(3px, 3px); }
 .retro-button.danger { background-color: #ff4d4d; color: white; font-size: 0.8rem; padding: 0.5vh 1vw;}
@@ -73,14 +62,12 @@ h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase;
 .player-checkboxes { display: flex; flex-wrap: wrap; justify-content: center; gap: 1vw; font-size: clamp(1rem, 2.5vh, 1.5rem); margin: 2vh 0; }
 .player-checkboxes label { background: #eee; padding: 0.5vh 1vw; border: 2px solid var(--border-color); border-radius: 4px; cursor: pointer; }
 
-/* Ultra Compacte Tabellen */
 .retro-table { width: 100%; border-collapse: collapse; margin-bottom: 0.5vh; font-size: clamp(0.7rem, 1.8vh, 1rem); }
 .retro-table th, .retro-table td { border: 2px solid var(--border-color); padding: 0.2vh 0.2vw; text-align: center; }
 .retro-table th { background-color: var(--border-color); color: var(--accent-color); font-family: 'Alfa Slab One', serif; font-size: 0.8em; }
 .punten-cel { font-weight: bold; font-size: 1.1em; background-color: #eee; }
 .stat-table th { background-color: #333; }
 
-/* Ultra Compacte Wedstrijden */
 .match-container { border-bottom: 1px dashed #ccc; padding: 0.5vh 0; flex: 1; display: flex; flex-direction: column; justify-content: center; }
 .match-container:last-child { border-bottom: none; }
 .match-row { display: flex; justify-content: center; align-items: center; gap: 0.5vw; margin-bottom: 0.2vh; }
@@ -98,17 +85,18 @@ h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase;
 .co-input { width: clamp(30px, 4vw, 50px); }
 .max-input { width: clamp(15px, 2vw, 25px); }
 
-/* --- FULL SCREEN ZWART/GELE LOTING --- */
+/* --- AANGEPASTE FULL SCREEN LOTING --- */
 .loting-mega-box {
     background-color: #111;
     color: var(--highlight-color);
     border: 6px solid var(--highlight-color);
     border-radius: 15px;
-    padding: 4vh 2vw;
+    padding: 5vh 2vw;
     margin: 2vh auto;
     width: 95%;
     max-width: 1400px;
-    height: 50vh;
+    min-height: 40vh; /* Nu schaalt het netjes mee! */
+    height: auto;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -117,9 +105,15 @@ h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase;
     text-align: center;
     animation: bounceIn 0.5s forwards;
 }
-.loting-mega-box h1 { font-size: clamp(2rem, 8vw, 6rem); line-height: 1.1; margin: 0; text-shadow: 4px 4px 0px #000; }
+.loting-mega-box h1 { 
+    font-size: clamp(1.8rem, 5vw, 4.5rem); /* Iets kleiner om overflow te voorkomen */
+    line-height: 1.2; 
+    margin: 0; 
+    text-shadow: 4px 4px 0px #000; 
+    word-wrap: break-word; /* Voorkomt dat te lange woorden uit de box breken */
+}
 .loting-mega-box h3 { color: #fff; font-size: clamp(1rem, 3vw, 2rem); margin: 0; }
-.loting-poule-box { background-color: var(--accent-color); color: #111; font-size: clamp(3rem, 10vw, 8rem); padding: 0 4vw; border-radius: 15px; margin-top: 1vh; border: 5px solid var(--border-color); line-height: 1.1; }
+.loting-poule-box { background-color: var(--accent-color); color: #111; font-size: clamp(3rem, 8vw, 6rem); padding: 0 4vw; border-radius: 15px; margin-top: 1vh; border: 5px solid var(--border-color); line-height: 1.1; }
 
 @keyframes bounceIn { 0% { transform: scale(0.3); opacity: 0; } 50% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 

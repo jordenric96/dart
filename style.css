@@ -24,6 +24,7 @@ body {
 
 h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase; margin: 0.5vh 0; letter-spacing: 1px; text-align: center; }
 
+/* Kaders */
 .retro-header, .info-item, .card {
     background-color: var(--accent-color);
     border: 4px solid var(--border-color);
@@ -37,9 +38,7 @@ h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase;
 }
 
 .retro-header { max-width: 600px; padding: 2vh 2vw; }
-.retro-header .title-small { font-size: clamp(1rem, 3vh, 1.5rem); }
 .retro-header .title-large { font-size: clamp(1.5rem, 6vw, 2.5rem); margin: 0.5vh 0; line-height: 1; }
-.retro-header h3 { font-size: clamp(0.8rem, 2vh, 1.2rem); }
 .friet-knop { background-color: var(--highlight-color); font-size: clamp(1rem, 2.5vh, 1.5rem) !important; padding: 1vh 2vw !important; margin-top: 1vh !important; }
 
 .info-board { width: 100%; display: flex; flex-direction: column; align-items: center; flex: 1; justify-content: center; }
@@ -55,7 +54,6 @@ h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase;
 .grid-col .card { flex: 1; display: flex; flex-direction: column; margin-bottom: 0; overflow: hidden; }
 
 .retro-button { font-family: 'Alfa Slab One', serif; background-color: var(--highlight-color); color: var(--border-color); border: 3px solid var(--border-color); padding: 0.5vh 1vw; font-size: clamp(0.8rem, 2vh, 1.2rem); border-radius: 6px; cursor: pointer; box-shadow: 3px 3px 0px 0px var(--border-color); }
-.retro-button:active { box-shadow: 0px 0px 0px 0px var(--border-color); transform: translate(3px, 3px); }
 .retro-button.danger { background-color: #ff4d4d; color: white; font-size: 0.8rem; padding: 0.5vh 1vw;}
 .icon-btn { background: #fff; border: 2px solid var(--border-color); border-radius: 4px; font-size: 1rem; cursor: pointer; padding: 0 0.5vw; margin-left: 0.5vw; }
 
@@ -66,10 +64,8 @@ h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase;
 .retro-table th, .retro-table td { border: 2px solid var(--border-color); padding: 0.2vh 0.2vw; text-align: center; }
 .retro-table th { background-color: var(--border-color); color: var(--accent-color); font-family: 'Alfa Slab One', serif; font-size: 0.8em; }
 .punten-cel { font-weight: bold; font-size: 1.1em; background-color: #eee; }
-.stat-table th { background-color: #333; }
 
 .match-container { border-bottom: 1px dashed #ccc; padding: 0.5vh 0; flex: 1; display: flex; flex-direction: column; justify-content: center; }
-.match-container:last-child { border-bottom: none; }
 .match-row { display: flex; justify-content: center; align-items: center; gap: 0.5vw; margin-bottom: 0.2vh; }
 .match-player { flex: 1; overflow: hidden; text-overflow: ellipsis; font-weight: bold; font-size: clamp(0.8rem, 2vh, 1.2rem); }
 .match-player.speler1 { text-align: right; }
@@ -78,48 +74,71 @@ h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase;
 
 .score-input { width: clamp(20px, 3vh, 35px); height: clamp(20px, 3vh, 35px); font-family: 'Alfa Slab One', serif; font-size: clamp(0.8rem, 2vh, 1.2rem); text-align: center; border: 2px solid var(--border-color); border-radius: 4px; }
 .locked-score { font-family: 'Alfa Slab One', serif; font-size: clamp(1rem, 2.5vh, 1.4rem); padding: 0 0.5vw; }
-
 .match-extras { display: flex; justify-content: space-between; background-color: #f5f5f5; border: 1px solid #ccc; border-radius: 3px; padding: 0.2vh 0.5vw; font-size: clamp(0.6rem, 1.5vh, 0.9rem); }
-.extra-box { display: flex; align-items: center; gap: 0.2vw; }
 .extra-input { font-family: 'Patrick Hand', cursive; text-align: center; border: 1px solid #999; border-radius: 2px; padding: 0; font-size: 1em; }
 .co-input { width: clamp(30px, 4vw, 50px); }
 .max-input { width: clamp(15px, 2vw, 25px); }
 
-/* --- AANGEPASTE FULL SCREEN LOTING --- */
+/* --- FULL SCREEN LOTING EN CINEMATIC --- */
 .loting-mega-box {
     background-color: #111;
     color: var(--highlight-color);
     border: 6px solid var(--highlight-color);
     border-radius: 15px;
-    padding: 5vh 2vw;
-    margin: 2vh auto;
+    padding: 4vh 2vw;
+    margin: 1vh auto;
     width: 95%;
     max-width: 1400px;
-    min-height: 40vh; /* Nu schaalt het netjes mee! */
-    height: auto;
+    min-height: 42vh;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     box-shadow: 10px 10px 0px 0px var(--border-color);
     text-align: center;
-    animation: bounceIn 0.5s forwards;
+    position: relative;
+    overflow: hidden;
 }
-.loting-mega-box h1 { 
-    font-size: clamp(1.8rem, 5vw, 4.5rem); /* Iets kleiner om overflow te voorkomen */
-    line-height: 1.2; 
-    margin: 0; 
-    text-shadow: 4px 4px 0px #000; 
-    word-wrap: break-word; /* Voorkomt dat te lange woorden uit de box breken */
-}
+.loting-mega-box h1 { font-size: clamp(1.8rem, 5vw, 4.5rem); line-height: 1.2; margin: 0; text-shadow: 4px 4px 0px #000; }
 .loting-mega-box h3 { color: #fff; font-size: clamp(1rem, 3vw, 2rem); margin: 0; }
 .loting-poule-box { background-color: var(--accent-color); color: #111; font-size: clamp(3rem, 8vw, 6rem); padding: 0 4vw; border-radius: 15px; margin-top: 1vh; border: 5px solid var(--border-color); line-height: 1.1; }
-
-@keyframes bounceIn { 0% { transform: scale(0.3); opacity: 0; } 50% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 
 .poule-list { width: 45%; border: 3px solid var(--border-color); background: #fff; border-radius: 6px; padding: 1vh; box-shadow: 3px 3px 0px 0px var(--border-color); }
 .poule-list ul { list-style: none; padding: 0; font-size: clamp(1rem, 3vh, 1.8rem); margin: 0; }
 .poule-list li { border-bottom: 1px dashed #ccc; padding: 0.5vh 0; }
+
+/* CINEMATIC EFFECTEN (0-20 SEC) */
+.spotlight {
+    position: absolute; top: 0; width: 30vw; height: 150vh;
+    background: radial-gradient(circle at top, rgba(255, 230, 0, 0.25), transparent 60%);
+    transform-origin: top center; pointer-events: none; mix-blend-mode: screen;
+}
+.spotlight.left { left: 10%; animation: swingLeft 5s infinite ease-in-out; }
+.spotlight.right { right: 10%; animation: swingRight 5.5s infinite ease-in-out; }
+
+@keyframes swingLeft { 0%, 100% { transform: rotate(-30deg); } 50% { transform: rotate(30deg); } }
+@keyframes swingRight { 0%, 100% { transform: rotate(30deg); } 50% { transform: rotate(-30deg); } }
+
+.vague-names-bg {
+    position: absolute; width: 100%; height: 100%; top: 0; left: 0;
+    display: flex; flex-wrap: wrap; justify-content: space-around; align-items: center;
+    opacity: 0.08; filter: blur(4px); font-size: 3rem; font-family: 'Alfa Slab One', serif; color: #fff; pointer-events: none;
+}
+
+.firework-flash {
+    position: absolute; width: 10px; height: 10px; border-radius: 50%;
+    pointer-events: none; opacity: 0;
+}
+.fw-1 { top: 20%; left: 30%; animation: fwBurst 3s infinite 0.5s; }
+.fw-2 { top: 40%; right: 25%; animation: fwBurst 4s infinite 1.5s; }
+.fw-3 { top: 15%; right: 40%; animation: fwBurst 3.5s infinite 2.2s; }
+
+@keyframes fwBurst {
+    0% { opacity: 0; transform: scale(0); box-shadow: 0 0 10px #ff0, 0 0 20px #f00; }
+    5% { opacity: 1; }
+    40% { opacity: 0.8; box-shadow: 0 0 40px #ff0, 0 0 80px #f0f, 0 0 120px transparent; }
+    60%, 100% { opacity: 0; transform: scale(8); }
+}
 
 /* Modal */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); z-index: 9999; display: none; justify-content: center; align-items: center; }

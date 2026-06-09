@@ -1,6 +1,6 @@
 // --- JOUW DATA VOOR DE REKENING ---
 const financiën = {
-    collectAndGoTotaal: 0.00, // Vul hier later de prijs in
+    collectAndGoTotaal: 0.00, 
     rekeningNummer: "BE00 0000 0000 0000 (Op naam van ...)", 
     bestellingen: {
         "Jorden": { item: "Groot pak + Bicky", prijs: 0.00 },
@@ -13,27 +13,18 @@ const financiën = {
         "Tibe": { item: "Familiepak", prijs: 0.00 }
     }
 };
-// --------------------------------------------------------
 
 const alleSpelers = ["Jorden", "Yarni", "Joël", "Vince", "Jessy", "Stefaan", "Wim", "Tibe"];
 
 let state = {
-    fase: 'setup', 
-    poules: { A: [], B: [] },
-    matches: [],
-    standings: { A: [], B: [] },
-    knockouts: null, 
-    lotingDeelnemers: [], 
-    huidigeTrekking: null,
-    statsCO: [],
-    stats180: []
+    fase: 'setup', poules: { A: [], B: [] }, matches: [], standings: { A: [], B: [] }, knockouts: null, lotingDeelnemers: [], huidigeTrekking: null, statsCO: [], stats180: []
 };
 
-// DOM Elementen
 const appContainer = document.getElementById('app-container');
 const infoBoard = document.getElementById('info-board');
 const mainHeader = document.getElementById('main-header');
 const resetBtn = document.getElementById('reset-btn');
+const resetZone = document.getElementById('reset-zone');
 
 function init() {
     const savedState = localStorage.getItem('dartToernooiState');
@@ -47,13 +38,8 @@ function saveState() {
     render();
 }
 
-function saveStateSilent() {
-    // Slaat de data op, maar hertekent het scherm NIET. Voorkomt dat de animatie breekt.
-    localStorage.setItem('dartToernooiState', JSON.stringify(state));
-}
-
 resetBtn.addEventListener('click', () => {
-    if(confirm("Weet je zeker dat je ALLES wilt wissen? Dit kan niet ongedaan gemaakt worden!")) {
+    if(confirm("Weet je zeker dat je ALLES wilt wissen?")) {
         localStorage.removeItem('dartToernooiState');
         state = { fase: 'setup', poules: { A: [], B: [] }, matches: [], standings: { A: [], B: [] }, knockouts: null, lotingDeelnemers: [], huidigeTrekking: null, statsCO: [], stats180: [] };
         render();
@@ -66,14 +52,17 @@ function render() {
     if (state.fase === 'setup') {
         if(infoBoard) infoBoard.style.display = 'flex';
         if(mainHeader) mainHeader.style.display = 'block';
+        if(resetZone) resetZone.style.display = 'block';
         renderSetup();
     } else if (state.fase === 'loting') {
         if(infoBoard) infoBoard.style.display = 'none';
-        if(mainHeader) mainHeader.style.display = 'block';
+        if(mainHeader) mainHeader.style.display = 'none'; // Header direct weg voor Full Screen Loting
+        if(resetZone) resetZone.style.display = 'block';
         renderLoting();
     } else {
         if(infoBoard) infoBoard.style.display = 'none';
         if(mainHeader) mainHeader.style.display = 'none'; 
+        if(resetZone) resetZone.style.display = 'none'; // Reset knop ook weg om plaats te besparen op dashboard
         renderDashboard();
     }
 }
@@ -83,26 +72,16 @@ function renderSetup() {
     alleSpelers.forEach(speler => {
         html += `<label><input type="checkbox" class="speler-check" value="${speler}" checked> ${speler}</label>`;
     });
-    html += `</div><button id="start-loting-btn" class="retro-button">🎯 Start De Loting!</button></div>`;
+    html += `</div><button id="start-loting-btn" class="retro-button" style="font-size: 1.5em; padding: 10px 20px;">🎯 Start De Loting!</button></div>`;
     appContainer.innerHTML = html;
 
     document.getElementById('start-loting-btn').addEventListener('click', () => {
         const aanwezigen = Array.from(document.querySelectorAll('.speler-check:checked')).map(cb => cb.value);
-        if (aanwezigen.length < 4) { alert("Minimaal 4 spelers nodig!"); return; }
-        
-        // --- EXTRA BEVEILIGING VOOR DE LOTING ---
-        let startCode = prompt("Voer de code in om de loting te starten:");
-        if (startCode !== "1403") {
-            alert("❌ Foute code! De loting kan niet gestart worden.");
-            return;
-        }
-        // ----------------------------------------
-
+        if (aanwezigen.length < 4) { alert("Minimaal 4 spelers!"); return; }
         voerLotingUit(aanwezigen);
     });
 }
 
-// --- NIEUWE AUTOMATISCHE LOTING LOGICA MET EXTRA SPANNING ---
 function voerLotingUit(spelers) {
     for (let i = spelers.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -113,128 +92,104 @@ function voerLotingUit(spelers) {
     state.huidigeTrekking = null;
     state.matches = []; 
     state.fase = 'loting';
-    saveStateSilent(); 
-    render(); 
-    
-    setTimeout(startAutoLotingSequence, 1000);
+    saveState();
 }
 
 function renderLoting() {
-    let html = `<div class="card" style="margin: 0 auto; max-width: 600px;">
-        <h2>🏆 DE POT 🏆</h2>
-        
-        <div id="hype-box" class="draw-reveal-big" style="display:none; text-align: center; padding: 40px 20px; border-color: var(--highlight-color); background: var(--border-color); color: var(--accent-color);">
-            <h1 id="hype-text" style="line-height: 1.5; color: var(--highlight-color); font-size: 1.8em;"></h1>
-        </div>
+    let html = `<div style="width: 100%; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center;">`;
 
-        <div class="draw-reveal-big" id="suspense-box">
-            <h3 style="margin:0; color: #555;">Speler:</h3>
-            <h1 id="spinning-name">Klaarzetten...</h1>
-            <div id="poule-reveal-area">
-                <h3 style="margin:10px 0 0 0; color: #555;">Poule:</h3>
-                <h2 id="spinning-poule" style="font-size: 2em; margin: 0; background-color: var(--border-color); color: #fff; display: inline-block; padding: 5px 15px; border-radius: 5px;">?</h2>
-            </div>
-        </div>
-
-        <div style="display:flex; justify-content:space-around; margin-top: 15px; width: 100%;">
-            <div class="poule-list"><h3>Poule A</h3><ul id="poule-A-list">${state.poules.A.map(s => `<li>${s}</li>`).join('')}</ul></div>
-            <div class="poule-list"><h3>Poule B</h3><ul id="poule-B-list">${state.poules.B.map(s => `<li>${s}</li>`).join('')}</ul></div>
-        </div>
-    </div>`;
-
-    appContainer.innerHTML = html;
-}
-
-function startAutoLotingSequence() {
-    if (state.fase !== 'loting') return; 
-    trekVolgendeSpeler();
-}
-
-function trekVolgendeSpeler() {
-    if (state.lotingDeelnemers.length === 0) {
-        setTimeout(startHypeSequence, 1500); 
-        return;
+    if (state.huidigeTrekking) {
+        html += `<div class="loting-mega-box">
+                    <h3>SPELER:</h3>
+                    <h1>${state.huidigeTrekking.naam}</h1>
+                    <h3 style="margin-top: 2vh;">POULE:</h3>
+                    <div class="loting-poule-box">${state.huidigeTrekking.poule}</div>
+                 </div>`;
+    } else {
+        html += `<div class="loting-mega-box" id="intro-box">
+                    <h1>DE PIJLEN ZIJN GESLEPEN...<br><br>DE BORDEN HANGEN KLAAR...</h1>
+                 </div>
+                 <div class="loting-mega-box" id="suspense-box" style="display:none;">
+                    <h3>SPELER:</h3>
+                    <h1 id="spinning-name">???</h1>
+                    <div id="poule-reveal-area" style="display:none; width: 100%;">
+                        <h3 style="margin-top: 2vh;">POULE:</h3>
+                        <div id="spinning-poule" class="loting-poule-box" style="width: fit-content; margin: 0 auto;">?</div>
+                    </div>
+                 </div>`;
     }
 
-    const speler = state.lotingDeelnemers.shift();
-    
-    let validPoules = [];
-    if (state.poules.A.length < 4) validPoules.push('A');
-    if (state.poules.B.length < 4) validPoules.push('B');
-    const poule = validPoules[Math.floor(Math.random() * validPoules.length)];
+    if (state.lotingDeelnemers.length > 0) {
+        html += `<div><button id="trek-btn" class="retro-button" style="font-size: clamp(1.5rem, 4vw, 2.5rem); padding: 2vh 4vw; margin-top: 2vh;">🎲 Trek Speler (${state.lotingDeelnemers.length})</button></div>`;
+    } else {
+        html += `<div><button id="naar-poules-btn" class="retro-button" style="font-size: clamp(1.5rem, 4vw, 2.5rem); padding: 2vh 4vw; margin-top: 2vh; background-color: #4CAF50; color: white;">🏆 Let's Play Darts! ➡️</button></div>`;
+    }
 
-    const spinName = document.getElementById('spinning-name');
-    const spinPoule = document.getElementById('spinning-poule');
-    
-    spinPoule.innerText = '?'; // Voorkomt lay-out sprongen
+    html += `<div style="display:flex; justify-content:space-around; margin-top: 3vh; width: 100%; max-width: 1200px; margin-left: auto; margin-right: auto;">
+                <div class="poule-list"><h3>POULE A</h3><ul>${state.poules.A.map(s => `<li>${s}</li>`).join('')}</ul></div>
+                <div class="poule-list"><h3>POULE B</h3><ul>${state.poules.B.map(s => `<li>${s}</li>`).join('')}</ul></div>
+             </div></div>`;
 
-    let cyclesName = 0;
-    let intervalName = setInterval(() => {
-        spinName.innerText = alleSpelers[Math.floor(Math.random() * alleSpelers.length)];
-        cyclesName++;
+    appContainer.innerHTML = html;
 
-        if (cyclesName > 25) { // Langer draaien (2.5s)
-            clearInterval(intervalName);
-            spinName.innerText = speler; 
+    if (state.lotingDeelnemers.length > 0) {
+        document.getElementById('trek-btn').addEventListener('click', function() {
+            this.style.display = 'none';
+            let introBox = document.getElementById('intro-box');
+            if(introBox) introBox.style.display = 'none';
             
-            setTimeout(() => {
-                let cyclesPoule = 0;
-                let intervalPoule = setInterval(() => {
-                    spinPoule.innerText = (Math.random() > 0.5) ? 'A' : 'B';
-                    cyclesPoule++;
+            let suspenseBox = document.getElementById('suspense-box');
+            suspenseBox.style.display = 'flex';
+            document.getElementById('poule-reveal-area').style.display = 'none'; 
+            
+            let spinName = document.getElementById('spinning-name');
+            let spinPoule = document.getElementById('spinning-poule');
+            
+            let cyclesName = 0;
+            let intervalName = setInterval(() => {
+                spinName.innerText = state.lotingDeelnemers[Math.floor(Math.random() * state.lotingDeelnemers.length)];
+                cyclesName++;
+                
+                if(cyclesName > 15) {
+                    clearInterval(intervalName);
+                    const speler = state.lotingDeelnemers.shift(); 
+                    spinName.innerText = speler; 
 
-                    if (cyclesPoule > 20) { // Poule spanning (2s)
-                        clearInterval(intervalPoule);
-                        spinPoule.innerText = poule; 
+                    setTimeout(() => {
+                        document.getElementById('poule-reveal-area').style.display = 'block';
                         
-                        state.poules[poule].push(speler);
-                        document.getElementById(`poule-${poule}-list`).innerHTML += `<li>${speler}</li>`;
-                        saveStateSilent();
+                        let validPoules = [];
+                        if (state.poules.A.length < 4) validPoules.push('A');
+                        if (state.poules.B.length < 4) validPoules.push('B');
 
-                        setTimeout(trekVolgendeSpeler, 2500); // Lange pauze voor reacties
-                    }
-                }, 100);
-            }, 1000); 
-        }
-    }, 100); 
+                        let cyclesPoule = 0;
+                        let intervalPoule = setInterval(() => {
+                            spinPoule.innerText = (Math.random() > 0.5) ? 'A' : 'B'; 
+                            cyclesPoule++;
+                            
+                            if (cyclesPoule > 15) {
+                                clearInterval(intervalPoule);
+                                const poule = validPoules[Math.floor(Math.random() * validPoules.length)];
+                                spinPoule.innerText = poule;
+                                
+                                state.poules[poule].push(speler);
+                                state.huidigeTrekking = { naam: speler, poule: poule };
+                                
+                                setTimeout(() => { saveState(); }, 1200);
+                            }
+                        }, 80);
+                    }, 800);
+                }
+            }, 100);
+        });
+    } else {
+        document.getElementById('naar-poules-btn').addEventListener('click', () => {
+            if (state.matches.length === 0) genereerWedstrijden();
+            state.fase = 'poules';
+            saveState();
+        });
+    }
 }
-
-function startHypeSequence() {
-    const suspenseBox = document.getElementById('suspense-box');
-    const hypeBox = document.getElementById('hype-box');
-    const hypeText = document.getElementById('hype-text');
-
-    suspenseBox.style.display = 'none';
-    hypeBox.style.display = 'block';
-
-    const messages = [
-        "🔥 DE POULES ZIJN GEKEND! 🔥",
-        "De pijlen zijn geslepen...<br>De borden hangen klaar...",
-        "De rivaliteit is real...<br>Geen genade aan de oche!",
-        "Wie kroont zich tot de allereerste kampioen?!",
-        "Houd de focus scherp...<br>En het bier koud! 🍻",
-        "Wie gooit de hoogste uitgooi?<br>Wie gooit de eerste 180?!",
-        "🎯 GAME ON!<br>MAY THE BEST OG WIN! 🎯"
-    ];
-
-    let delay = 0;
-    messages.forEach((msg, index) => {
-        setTimeout(() => {
-            hypeBox.style.animation = 'none';
-            hypeBox.offsetHeight; 
-            hypeBox.style.animation = 'bounceIn 0.6s ease forwards';
-            hypeText.innerHTML = msg;
-        }, delay);
-        delay += 3500; // Verhoogd naar 3.5 seconden per blokje
-    });
-
-    setTimeout(() => {
-        if (state.matches.length === 0) genereerWedstrijden();
-        state.fase = 'poules';
-        saveState(); 
-    }, delay + 1500); 
-}
-// -----------------------------------------------------------
 
 function genereerWedstrijden() {
     state.matches = [];
@@ -255,14 +210,14 @@ function genereerWedstrijden() {
 
 function renderDashboard() {
     let html = `<div class="dashboard-grid">`;
-    html += `<div>${generatePouleHTML('A')}</div>`;
-    html += `<div>${generatePouleHTML('B')}</div>`;
+    html += `<div class="grid-col">${generatePouleHTML('A')}</div>`;
+    html += `<div class="grid-col">${generatePouleHTML('B')}</div>`;
     
-    html += `<div>`;
+    html += `<div class="grid-col">`;
     if (state.fase === 'knockouts' && state.knockouts) {
         html += generateKnockoutsHTML();
     } else if (state.matches.every(m => m.locked)) {
-        html += `<div class="card" style="margin-bottom: 10px;"><button id="naar-knockouts-btn" class="retro-button">🏆 Start Halve Finales!</button></div>`;
+        html += `<div class="card" style="margin-bottom: 1vh;"><button id="naar-knockouts-btn" class="retro-button">🏆 Start Halve Finales!</button></div>`;
     }
     html += generateStatsHTML();
     html += `</div></div>`;
@@ -273,7 +228,7 @@ function renderDashboard() {
 
 function generatePouleHTML(poule) {
     let html = `<div class="card">
-        <h2 style="font-size: 1.2em;">Poule ${poule} Stand</h2>
+        <h2>Poule ${poule} Stand</h2>
         <table class="retro-table">
             <tr><th>Naam</th><th>#</th><th>W</th><th>G</th><th>V</th><th>PT</th><th>Legs</th></tr>
             ${state.standings[poule].map(s => `
@@ -281,7 +236,8 @@ function generatePouleHTML(poule) {
                 <td>${s.gespeeld}</td><td>${s.winst}</td><td>${s.gelijk}</td><td>${s.verlies}</td><td class="punten-cel">${s.punten}</td><td>${s.legsVoor}-${s.legsTegen}</td></tr>
             `).join('')}
         </table>
-        <h3 style="margin-top: 5px; font-size: 1.1em;">Wedstrijden</h3>`;
+        <h3>Wedstrijden</h3>
+        <div style="flex: 1; display: flex; flex-direction: column;">`;
         
     html += state.matches.filter(m => m.poule === poule).map(m => `
         <div class="match-container">
@@ -306,17 +262,17 @@ function generatePouleHTML(poule) {
             </div>
         </div>
     `).join('');
-    return html + `</div>`;
+    return html + `</div></div>`;
 }
 
 function generateKnockoutsHTML() {
-    let html = `<div class="card" style="border-color: var(--highlight-color); margin-bottom: 10px;">
-        <h2 style="font-size: 1.2em;">🔥 KNOCK-OUTS 🔥</h2>`;
+    let html = `<div class="card" style="border-color: var(--highlight-color); margin-bottom: 1vh;">
+        <h2>🔥 KNOCK-OUTS 🔥</h2><div style="flex:1; display:flex; flex-direction:column; justify-content:center;">`;
     
     state.knockouts.forEach((m, index) => {
-        if (index === 2) html += `<hr style="border:1px dashed #ccc; margin:5px 0;"><h3 style="font-size: 1.1em;">🏆 FINALE 🏆</h3>`;
+        if (index === 2) html += `<hr style="border:1px dashed #ccc; margin:1vh 0;"><h3>🏆 FINALE 🏆</h3>`;
         html += `
-        <div class="match-container">
+        <div class="match-container" style="border:none;">
             <div class="match-row">
                 <span class="match-player speler1">${m.speler1}</span>
                 <div class="match-inputs">
@@ -331,20 +287,20 @@ function generateKnockoutsHTML() {
             </div>
         </div>`;
     });
-    return html + `</div>`;
+    return html + `</div></div>`;
 }
 
 function generateStatsHTML() {
-    let html = `<div class="card"><h2 style="font-size: 1.2em;">📊 Stats</h2>`;
-    html += `<h3 style="margin-top:5px; font-size: 1em;">🔥 Checkouts</h3><table class="retro-table stat-table"><tr><th>Speler</th><th>Uitgooi</th></tr>`;
+    let html = `<div class="card"><h2>📊 Stats</h2><div style="flex:1; display:flex; flex-direction:column; justify-content:space-around;">`;
+    html += `<div><h3>🔥 Checkouts</h3><table class="retro-table stat-table"><tr><th>Speler</th><th>Uitgooi</th></tr>`;
     if (state.statsCO.length === 0) html += `<tr><td colspan="2">-</td></tr>`;
     else state.statsCO.slice(0, 5).forEach(co => html += `<tr><td>${co.naam}</td><td><strong>${co.score}</strong></td></tr>`);
-    html += `</table>`;
+    html += `</table></div>`;
 
-    html += `<h3 style="margin-top:10px; font-size: 1em;">🍺 180/171's</h3><table class="retro-table stat-table"><tr><th>Speler</th><th>Aantal</th></tr>`;
+    html += `<div><h3>🍺 180/171's</h3><table class="retro-table stat-table"><tr><th>Speler</th><th>Aantal</th></tr>`;
     if (state.stats180.length === 0) html += `<tr><td colspan="2">-</td></tr>`;
     else state.stats180.slice(0, 5).forEach(m => html += `<tr><td>${m.naam}</td><td><strong>${m.count}</strong></td></tr>`);
-    html += `</table></div>`;
+    html += `</table></div></div></div>`;
 
     return html;
 }
@@ -414,7 +370,6 @@ function updateFinaleSchema() {
     if (hf2.locked) fin.speler2 = hf2.score1 > hf2.score2 ? hf2.speler1 : hf2.speler2; else fin.speler2 = 'Winnaar HF 2';
 }
 
-// --- FRIET & REKENING LOGICA ---
 function setupFrietModal() {
     const frietBtn = document.getElementById('friet-btn');
     const frietModal = document.getElementById('friet-modal');
@@ -444,46 +399,16 @@ function setupFrietModal() {
 
 function genereerRekening(rekeningNummerDisplay, rekeningInhoud) {
     rekeningNummerDisplay.innerText = financiën.rekeningNummer;
-    
-    let actieveSpelers = [];
-    if (state.poules.A.length > 0 || state.poules.B.length > 0) {
-        actieveSpelers = state.poules.A.concat(state.poules.B);
-    } else if (state.lotingDeelnemers.length > 0) {
-        actieveSpelers = state.lotingDeelnemers;
-    } else {
-        actieveSpelers = alleSpelers; 
-    }
+    let actieveSpelers = (state.poules.A.length > 0 || state.poules.B.length > 0) ? state.poules.A.concat(state.poules.B) : (state.lotingDeelnemers.length > 0 ? state.lotingDeelnemers : alleSpelers);
+    const collectGoPerPersoon = actieveSpelers.length > 0 ? (financiën.collectAndGoTotaal / actieveSpelers.length) : 0;
 
-    const aantalSpelers = actieveSpelers.length;
-    const collectGoPerPersoon = aantalSpelers > 0 ? (financiën.collectAndGoTotaal / aantalSpelers) : 0;
-
-    let html = `
-        <p><strong>🛒 Collect & Go Totaal:</strong> €${financiën.collectAndGoTotaal.toFixed(2)}</p>
-        <p><strong>👥 Gedeeld door ${aantalSpelers} spelers:</strong> €${collectGoPerPersoon.toFixed(2)} p.p.</p>
-        
-        <table class="receipt-table">
-            <tr>
-                <th>Speler</th>
-                <th>Frituur Bestelling</th>
-                <th>Te Betalen</th>
-            </tr>
-    `;
+    let html = `<p><strong>🛒 Collect & Go Totaal:</strong> €${financiën.collectAndGoTotaal.toFixed(2)}</p><p><strong>👥 Gedeeld door ${actieveSpelers.length} spelers:</strong> €${collectGoPerPersoon.toFixed(2)} p.p.</p><table class="receipt-table"><tr><th>Speler</th><th>Frituur Bestelling</th><th>Te Betalen</th></tr>`;
 
     actieveSpelers.forEach(speler => {
         let bestelling = financiën.bestellingen[speler] || { item: "Geen bestelling", prijs: 0.00 };
-        let totaalPersoon = collectGoPerPersoon + bestelling.prijs;
-        
-        html += `
-            <tr>
-                <td><strong>${speler}</strong></td>
-                <td style="font-size: 0.9em; color: #555;">${bestelling.item}<br>(€${bestelling.prijs.toFixed(2)})</td>
-                <td class="total-row">€${totaalPersoon.toFixed(2)}</td>
-            </tr>
-        `;
+        html += `<tr><td><strong>${speler}</strong></td><td style="font-size: 0.9em; color: #555;">${bestelling.item}<br>(€${bestelling.prijs.toFixed(2)})</td><td class="total-row">€${(collectGoPerPersoon + bestelling.prijs).toFixed(2)}</td></tr>`;
     });
-
-    html += `</table>`;
-    rekeningInhoud.innerHTML = html;
+    rekeningInhoud.innerHTML = html + `</table>`;
 }
 
 init();

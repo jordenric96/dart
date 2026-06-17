@@ -45,8 +45,8 @@ async function init() {
                 state.stats[s].breaks = state.stats[s].breaks || 0;
                 state.stats[s].first9Score = state.stats[s].first9Score || 0;
                 state.stats[s].first9Darts = state.stats[s].first9Darts || 0;
-                state.stats[s].highestScore = state.stats[s].highestScore || 0; 
-                state.stats[s].max180 = state.stats[s].max180 || 0;
+                state.stats[s].bullsWon = state.stats[s].bullsWon || 0;
+                if (!state.stats[s].highScores) state.stats[s].highScores = [];
                 if (!state.stats[s].checkouts) state.stats[s].checkouts = [];
             });
 
@@ -96,7 +96,13 @@ async function saveState(forceRender = false) {
 
 function checkOverlayTrigger() {
     if (state.lastOverlay && state.lastOverlay.time !== windowLastOverlayTime) {
-        triggerOverlay(state.lastOverlay.title, state.lastOverlay.name, state.lastOverlay.subtitle);
+        let isRecord = state.lastOverlay.title.includes('RECORD');
+        // Tablets negeren 'RECORD' overlays, TV toont ze wel!
+        if (isRecord && currentView !== 'dashboard') {
+            // Niets doen op tablet
+        } else {
+            triggerOverlay(state.lastOverlay.title, state.lastOverlay.name, state.lastOverlay.subtitle);
+        }
         windowLastOverlayTime = state.lastOverlay.time;
     }
 }
@@ -168,9 +174,9 @@ function initStatsKlassen() {
     alleSpelers.forEach(s => {
         state.stats[s] = { 
             totalDarts: 0, totalScore: 0, legsPlayed: 0, checkouts: [], 
-            bullsWon: 0, max180: 0, doubleAttempts: 0, doubleHits: 0,
+            bullsWon: 0, doubleAttempts: 0, doubleHits: 0,
             shortestLeg: { darts: 999, avg: 0 }, matchAvgs: [],
-            tonPlus: 0, breaks: 0, first9Score: 0, first9Darts: 0, highestScore: 0
+            tonPlus: 0, breaks: 0, first9Score: 0, first9Darts: 0, highScores: []
         };
     });
 }
@@ -178,7 +184,8 @@ function initStatsKlassen() {
 function berekenKlassement() {
     let standings = alleSpelers.map(speler => ({ naam: speler, pt: 0, w: 0, v: 0, legsV: 0, legsT: 0, saldo: 0 }));
     
-    state.matches.filter(m => m.fase === 'poule' && m.status === 'finished').forEach(m => {
+    // Voeg ook post_match toe aan de berekening zodat het klassement na een uitgooi direct juist is
+    state.matches.filter(m => m.fase === 'poule' && (m.status === 'finished' || m.status === 'post_match')).forEach(m => {
         let s1 = standings.find(s => s.naam === m.p1);
         let s2 = standings.find(s => s.naam === m.p2);
         s1.legsV += m.legs1; s1.legsT += m.legs2;
@@ -190,7 +197,7 @@ function berekenKlassement() {
     standings.sort((a, b) => b.pt - a.pt || b.saldo - a.saldo || b.legsV - a.legsV);
     state.standings = standings;
 
-    let pouleFinished = state.matches.filter(m => m.fase === 'poule').every(m => m.status === 'finished');
+    let pouleFinished = state.matches.filter(m => m.fase === 'poule').every(m => m.status === 'finished' || m.status === 'post_match');
     let hf1 = state.matches.find(m => m.id === 'HF1');
     let hf2 = state.matches.find(m => m.id === 'HF2');
     let fin = state.matches.find(m => m.id === 'FIN');
@@ -200,7 +207,7 @@ function berekenKlassement() {
         if (hf2 && hf2.status === 'waiting' && hf2.p1 === '2e Plaats') { hf2.p1 = standings[1].naam; hf2.p2 = standings[2].naam; }
     }
 
-    if (hf1 && hf1.status === 'finished' && hf2 && hf2.status === 'finished') {
+    if (hf1 && (hf1.status === 'finished' || hf1.status === 'post_match') && hf2 && (hf2.status === 'finished' || hf2.status === 'post_match')) {
         if (fin && fin.status === 'waiting' && fin.p1 === 'Winnaar HF1') {
             fin.p1 = hf1.legs1 > hf1.legs2 ? hf1.p1 : hf1.p2;
             fin.p2 = hf2.legs1 > hf2.legs2 ? hf2.p1 : hf2.p2;
@@ -263,6 +270,28 @@ function generateTVBoardHTML(title, match) {
     if (!match) return `<h3>${title}</h3><div style="flex:1; display:flex; align-items:center; justify-content:center; font-size:1.5rem; color:#444;">Bord Vrij</div>`;
     if (match.status === 'bullen') return `<h3>${title}</h3><div class="live-match-title">${match.p1} vs ${match.p2}</div><div style="flex:1; display:flex; align-items:center; justify-content:center; color:var(--gold); font-size:1.4rem;">🐂 BULLEN VOOR START 🐂</div>`;
     
+    // Post-Match Stat-Scherm voor op TV
+    if (match.status === 'post_match') {
+        let mAvg1 = match.matchDarts1 > 0 ? ((match.matchScore1 / match.matchDarts1) * 3).toFixed(2) : "0.00";
+        let mAvg2 = match.matchDarts2 > 0 ? ((match.matchScore2 / match.matchDarts2) * 3).toFixed(2) : "0.00";
+        return `
+            <h3 style="color:var(--gold);">📊 MATCH STATS: ${match.p1} VS ${match.p2}</h3>
+            <div style="display:flex; justify-content:space-around; align-items:center; flex:1; text-transform:uppercase;">
+                <div style="text-align:center;">
+                    <h2 style="color:var(--gold); font-size:2.2rem; margin:0;">${match.p1}</h2>
+                    <div style="font-size:1.2rem; color:#fff;">LEGS: ${match.legs1}</div>
+                    <div style="font-size:1.2rem; color:#fff;">AVG: ${mAvg1}</div>
+                    <div style="font-size:1rem; color:#aaa;">Pijlen: ${match.matchDarts1}</div>
+                </div>
+                <div style="text-align:center;">
+                    <h2 style="color:var(--gold); font-size:2.2rem; margin:0;">${match.p2}</h2>
+                    <div style="font-size:1.2rem; color:#fff;">LEGS: ${match.legs2}</div>
+                    <div style="font-size:1.2rem; color:#fff;">AVG: ${mAvg2}</div>
+                    <div style="font-size:1rem; color:#aaa;">Pijlen: ${match.matchDarts2}</div>
+                </div>
+            </div>`;
+    }
+
     let avg1 = match.matchDarts1 > 0 ? ((match.matchScore1 / match.matchDarts1) * 3).toFixed(2) : "0.00";
     let avg2 = match.matchDarts2 > 0 ? ((match.matchScore2 / match.matchDarts2) * 3).toFixed(2) : "0.00";
     let matchFase = match.fase === 'poule' ? 'Best of 5' : 'Best of 7';
@@ -273,12 +302,13 @@ function generateTVBoardHTML(title, match) {
     let mom1 = Math.min(100, (match.dartsLeg1 / 24) * 100); 
     let mom2 = Math.min(100, (match.dartsLeg2 / 24) * 100); 
 
+    // Pijlen teller is toegevoegd!
     return `
         <h3>${title} <span style="font-size:0.5em; background:#444; padding:2px 8px; border-radius:4px; margin-left:10px;">${matchFase} | Leg ${match.legs1 + match.legs2 + 1}</span></h3>
         <div class="live-score-row">
             <div class="player-col ${active1}">
                 <div class="p-name">${match.p1}</div>
-                <div class="p-legs">Legs: ${match.legs1}</div>
+                <div class="p-legs">Legs: ${match.legs1} | Pijlen: ${match.dartsLeg1}</div>
                 <div class="p-score">${match.score1}</div>
                 <div class="momentum-container"><div class="momentum-fill" style="width:${mom1}%"></div></div>
                 <div class="p-avg">M-Avg: ${avg1}</div>
@@ -286,7 +316,7 @@ function generateTVBoardHTML(title, match) {
             <div style="display:flex; align-items:center; font-size:1.5rem; color:#444;">VS</div>
             <div class="player-col ${active2}">
                 <div class="p-name">${match.p2}</div>
-                <div class="p-legs">Legs: ${match.legs2}</div>
+                <div class="p-legs">Legs: ${match.legs2} | Pijlen: ${match.dartsLeg2}</div>
                 <div class="p-score">${match.score2}</div>
                 <div class="momentum-container"><div class="momentum-fill" style="width:${mom2}%"></div></div>
                 <div class="p-avg">M-Avg: ${avg2}</div>
@@ -309,7 +339,7 @@ function updateLogboekOnly() {
         let p1Cls = "", p2Cls = "", label = "Wacht", itemCls = "";
         if (m.status === 'playing') { label = `B${m.board === 'board1' ? 1 : 2}`; itemCls = "bezig"; }
         else if (m.status === 'bullen') { label = "Bullen"; itemCls = "bullen"; }
-        else if (m.status === 'finished') { 
+        else if (m.status === 'finished' || m.status === 'post_match') { 
             label = `${m.legs1} - ${m.legs2}`; 
             itemCls = "klaar"; 
             if(m.legs1 > m.legs2) p1Cls = "winner-text";
@@ -326,6 +356,7 @@ function updateLogboekOnly() {
 }
 
 function updateDashboardData() {
+    // We tonen ook post_match op de borden!
     const activeB1 = state.matches.find(m => m.board === 'board1' && m.status !== 'finished' && m.status !== 'waiting');
     const activeB2 = state.matches.find(m => m.board === 'board2' && m.status !== 'finished' && m.status !== 'waiting');
     
@@ -350,7 +381,7 @@ function updateDashboardData() {
     const koHtml = (t, m, colorClass) => m ? `<div class="knockout-row" style="${(m.status==='playing'||m.status==='bullen')?'color:var(--neon-green);font-weight:bold;':''}">
         <span class="knockout-title" style="color:var(--${colorClass});">${t}</span>
         <span style="flex:1; text-align:right;">${m.p1}</span>
-        <span style="padding:0 10px; font-weight:bold; color:var(--${colorClass});">${m.status==='finished'?`${m.legs1}-${m.legs2}`:'vs'}</span>
+        <span style="padding:0 10px; font-weight:bold; color:var(--${colorClass});">${(m.status==='finished'||m.status==='post_match')?`${m.legs1}-${m.legs2}`:'vs'}</span>
         <span style="flex:1; text-align:left;">${m.p2}</span>
     </div>` : '';
     
@@ -366,6 +397,13 @@ function updateDashboardData() {
         if(state.stats[s] && state.stats[s].checkouts) state.stats[s].checkouts.forEach(c => allCheckouts.push({naam: s, val: c}));
     });
     let d_hgo = top7(allCheckouts);
+
+    // Alle Hoogste Scores van het toernooi verzamelen!
+    let allScores = [];
+    alleSpelers.forEach(s => {
+        if(state.stats[s] && state.stats[s].highScores) state.stats[s].highScores.forEach(c => allScores.push({naam: s, val: c}));
+    });
+    let d_hsc = top7(allScores);
 
     let d_tot = top7(alleSpelers.map(s => {
         let legs = state.stats[s]?.legsPlayed || 0;
@@ -385,7 +423,11 @@ function updateDashboardData() {
     }));
 
     let d_hgf = top7(alleSpelers.map(s => ({ naam: s, val: (state.stats[s]?.checkouts && state.stats[s].checkouts.length > 0) ? Math.max(...state.stats[s].checkouts) : 0 })));
-    let d_slg = alleSpelers.map(s => { let sl = state.stats[s]?.shortestLeg || { darts: 999 }; return { naam: s, val: sl.darts === 999 ? 0 : sl.darts }; }).filter(x => x.val > 0).sort((a,b) => a.val - b.val).slice(0,7);
+    
+    let d_slg = alleSpelers.map(s => { 
+        let sl = state.stats[s]?.shortestLeg || { darts: 999, avg: 0 }; 
+        return { naam: s, val: sl.darts === 999 ? 0 : sl.darts, txt: sl.darts === 999 ? '0' : `${sl.darts} <span style="font-weight:normal;color:#888;">(${parseFloat(sl.avg).toFixed(2)})</span>` }; 
+    }).filter(x => x.val > 0).sort((a,b) => a.val - b.val).slice(0,7);
     
     let d_mva = top7(alleSpelers.map(s => {
         let v = (state.stats[s]?.matchAvgs && state.stats[s].matchAvgs.length > 0) ? Math.max(...state.stats[s].matchAvgs) : 0;
@@ -398,9 +440,15 @@ function updateDashboardData() {
     }));
 
     let d_ton = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.tonPlus || 0 })));
-    let d_180 = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.max180 || 0 })));
     let d_brk = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.breaks || 0 })));
-    let d_hsc = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.highestScore || 0 })));
+    
+    // Bulls Gewonnen (totaal + win %)
+    let d_bul = top7(alleSpelers.map(s => {
+        let bWon = state.stats[s]?.bullsWon || 0;
+        let mStarted = state.matches.filter(m => (m.p1 === s || m.p2 === s) && ['playing', 'post_match', 'finished'].includes(m.status)).length;
+        let perc = mStarted > 0 ? ((bWon / mStarted) * 100).toFixed(2) : "0.00";
+        return { naam: s, val: bWon, txt: `${bWon} <span style="font-weight:normal;color:#888;">(${perc}%)</span>` };
+    }));
 
     if(document.getElementById('sb-1')) document.getElementById('sb-1').innerHTML = statBox('3-Dart Avg', d_avg);
     if(document.getElementById('sb-2')) document.getElementById('sb-2').innerHTML = statBox('Double %', d_dbl);
@@ -411,7 +459,7 @@ function updateDashboardData() {
     if(document.getElementById('sb-7')) document.getElementById('sb-7').innerHTML = statBox('Top Match Avg', d_mva);
     if(document.getElementById('sb-8')) document.getElementById('sb-8').innerHTML = statBox('First-9 Avg', d_f9a);
     if(document.getElementById('sb-9')) document.getElementById('sb-9').innerHTML = statBox('Ton-Plus (100+)', d_ton);
-    if(document.getElementById('sb-10')) document.getElementById('sb-10').innerHTML = statBox('Max 180s', d_180);
+    if(document.getElementById('sb-10')) document.getElementById('sb-10').innerHTML = statBox('Bulls Gewonnen', d_bul);
     if(document.getElementById('sb-11')) document.getElementById('sb-11').innerHTML = statBox('Meeste Breaks', d_brk);
     if(document.getElementById('sb-12')) document.getElementById('sb-12').innerHTML = statBox('Hoogste Score', d_hsc);
 }
@@ -456,6 +504,36 @@ function updateTabletData(boardId) {
             <div style="text-align:center; margin-top:5vh;"><button class="retro-button danger" onclick="annuleerLopendeMatch('${m.id}')">Annuleer Match</button></div>`;
         return;
     }
+    
+    if (m.status === 'post_match') {
+        let mAvg1 = m.matchDarts1 > 0 ? ((m.matchScore1 / m.matchDarts1) * 3).toFixed(2) : "0.00";
+        let mAvg2 = m.matchDarts2 > 0 ? ((m.matchScore2 / m.matchDarts2) * 3).toFixed(2) : "0.00";
+        
+        wrap.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1vh;">
+                <span style="font-size:1.5rem; font-weight:bold; color:var(--gold);">📊 MATCH STATS (${boardId.toUpperCase()})</span>
+                <button class="retro-button danger" style="padding:4px 10px; font-size:1rem;" onclick="sluitTabletEnFinishMatch('${m.id}')">Overslaan ⏭</button>
+            </div>
+            <div style="flex:1; display:flex; justify-content:center; align-items:center; background:var(--card-bg); border:3px solid var(--gold); border-radius:12px;">
+                <div style="display:flex; justify-content:space-around; width:100%; color:#fff; text-transform:uppercase;">
+                    <div style="text-align:center;">
+                        <h2 style="color:var(--gold); font-size:4rem; margin:0;">${m.p1}</h2>
+                        <div style="font-size:3rem;">LEGS: ${m.legs1}</div>
+                        <div style="font-size:2rem; margin-top:20px;">AVG: ${mAvg1}</div>
+                        <div style="font-size:1.5rem; color:#aaa;">Pijlen: ${m.matchDarts1}</div>
+                    </div>
+                    <div style="font-size:3rem; color:#555; align-self:center;">VS</div>
+                    <div style="text-align:center;">
+                        <h2 style="color:var(--gold); font-size:4rem; margin:0;">${m.p2}</h2>
+                        <div style="font-size:3rem;">LEGS: ${m.legs2}</div>
+                        <div style="font-size:2rem; margin-top:20px;">AVG: ${mAvg2}</div>
+                        <div style="font-size:1.5rem; color:#aaa;">Pijlen: ${m.matchDarts2}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        return;
+    }
 
     if (m.status === 'playing') {
         let avg1 = m.matchDarts1 > 0 ? ((m.matchScore1 / m.matchDarts1) * 3).toFixed(2) : "0.00";
@@ -471,14 +549,14 @@ function updateTabletData(boardId) {
             <div class="tablet-grid">
                 <div class="pane ${m.turn===1?'pane-active':'pane-inactive'}">
                     <h3 class="pane-name">${m.p1}</h3>
-                    <div class="pane-legs">LEGS: ${m.legs1}</div>
+                    <div class="pane-legs">LEGS: ${m.legs1} | PIJLEN: ${m.dartsLeg1}</div>
                     <div class="pane-score ${m.score1<=170?'checkout-ready':''}">${m.score1}</div>
                     <div class="pane-stats">Match Avg: ${avg1}</div>
                 </div>
                 
                 <div class="pane ${m.turn===2?'pane-active':'pane-inactive'}">
                     <h3 class="pane-name">${m.p2}</h3>
-                    <div class="pane-legs">LEGS: ${m.legs2}</div>
+                    <div class="pane-legs">LEGS: ${m.legs2} | PIJLEN: ${m.dartsLeg2}</div>
                     <div class="pane-score ${m.score2<=170?'checkout-ready':''}">${m.score2}</div>
                     <div class="pane-stats">Match Avg: ${avg2}</div>
                 </div>
@@ -505,6 +583,15 @@ window.koppelMatchAanBord = async function(mId, boardId) {
     m.board = boardId; m.status = 'bullen';
     appContainer.innerHTML = ''; 
     await saveState(true);
+};
+
+window.sluitTabletEnFinishMatch = async function(mId) {
+    const actM = state.matches.find(x => x.id === mId);
+    if (actM) {
+        actM.status = 'finished';
+        await saveState(true);
+    }
+    sluitTablet();
 };
 
 window.annuleerLopendeMatch = async function(mId) {
@@ -575,8 +662,9 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
 
     let overlayQueue = [];
 
-    if (score > state.stats[aP].highestScore) {
-        state.stats[aP].highestScore = score;
+    // Hoge scores loggen in de toernooilijst
+    if (score >= 100) {
+        state.stats[aP].highScores.push(score);
     }
 
     if (score > state.records.highestScore) {
@@ -613,7 +701,6 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
         m[dtLegStr] += dartsThrown; m[scLegStr] += score;
         m['matchDarts' + m.turn] += dartsThrown; m['matchScore' + m.turn] += score;
 
-        if(score === 180) state.stats[aP].max180++;
         if(score >= 100) state.stats[aP].tonPlus++;
 
         if (m.turn !== m.startThrower) state.stats[aP].breaks++;
@@ -638,7 +725,7 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
         let targets = m.fase === 'poule' ? 3 : 4;
 
         if(m.legs1 === targets || m.legs2 === targets) {
-            m.status = 'finished';
+            m.status = 'post_match'; // NIEUW: Post-Match fase gestart!
             let mAvg1 = parseFloat(((m.matchScore1 / m.matchDarts1)*3).toFixed(2));
             let mAvg2 = parseFloat(((m.matchScore2 / m.matchDarts2)*3).toFixed(2));
             state.stats[m.p1].matchAvgs.push(mAvg1);
@@ -659,7 +746,17 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
 
             appContainer.innerHTML = '';
             await saveState(true);
-            sluitTablet();
+            
+            // 25 Seconden wachten, dan automatisch afsluiten
+            setTimeout(async () => {
+                const actM = state.matches.find(x => x.id === m.id);
+                if (actM && actM.status === 'post_match') {
+                    actM.status = 'finished';
+                    await saveState(true);
+                    if (currentView === actM.board) sluitTablet();
+                }
+            }, 25000);
+            
             return;
         }
 
@@ -678,9 +775,7 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
     m[scStr] = calcScore; m[dtLegStr] += 3; m[scLegStr] += score;
     m['matchDarts' + m.turn] += 3; m['matchScore' + m.turn] += score;
     state.stats[aP].totalDarts += 3; state.stats[aP].totalScore += score;
-    if(score >= 100) state.stats[aP].tonPlus++;
-    if(score === 180) state.stats[aP].max180++;
-
+    
     if (overlayQueue.length > 0) {
         let best = overlayQueue[overlayQueue.length - 1];
         state.lastOverlay = { ...best, time: Date.now() };

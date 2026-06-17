@@ -1,6 +1,6 @@
-// --- JOUW INGESTELDE SUPABASE GEGEVENS ---
+// --- JOUW SUPABASE GEGEVENS (LET OP: Sleutel begint ALTIJD met eyJ...) ---
 const supabaseUrl = 'https://jpvgcgjnhvutqtrkbamc.supabase.co';
-const supabaseKey = 'Sb_publishable_1U6F-0j5fiRS5RCMzHGFvw_OnlnQdta';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwdmdjZ2puaHZ1dHF0cmtiYW1jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3MTIxMzgsImV4cCI6MjA5NzI4ODEzOH0.edR9Ve6FOOre5DcmHDoAPSF0rIsU_DVX1KFy9pQACyI';
 const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 // --------------------------------------------
 
@@ -19,35 +19,53 @@ const navButtons = document.querySelectorAll('.nav-btn');
 
 // --- SUPABASE INITIALISATIE & REALTIME SYNC ---
 async function init() {
-    // 1. Haal de huidige status op uit de database
-    const { data, error } = await supabaseClient.from('toernooi_data').select('state').eq('id', 1).single();
-    
-    if (data && data.state && Object.keys(data.state).length > 0) {
-        state = data.state;
-    } else {
-        // Eerste keer opstarten: genereer schema en stats
-        genereerSpeelschema();
-        initStats();
-        await saveState(true); 
-    }
-    render();
+    try {
+        // 1. Haal de huidige status op uit de database
+        const { data, error } = await supabaseClient.from('toernooi_data').select('state').eq('id', 1).single();
+        
+        if (error && error.code !== 'PGRST116') {
+            console.error("Fout bij ophalen database:", error);
+        }
 
-    // 2. Realtime kanaal openzetten: luister naar updates van de tablets
-    supabaseClient
-      .channel('schema-db-changes')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'toernooi_data' }, (payload) => {
-          state = payload.new.state;
-          berekenKlassement();
-          render();
-      })
-      .subscribe();
+        if (data && data.state && Object.keys(data.state).length > 0) {
+            state = data.state;
+        } else {
+            // Eerste keer opstarten: genereer schema en stats
+            genereerSpeelschema();
+            initStats();
+            await saveState(true); 
+        }
+        render();
+
+        // 2. Realtime kanaal openzetten: luister naar updates van andere apparaten (bv. de tablet)
+        supabaseClient
+          .channel('schema-db-changes')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'toernooi_data' }, (payload) => {
+              console.log("Live update ontvangen!", payload);
+              state = payload.new.state;
+              berekenKlassement();
+              render();
+          })
+          .subscribe((status) => {
+              if(status === 'SUBSCRIBED') console.log("Realtime verbinding succesvol!");
+          });
+
+    } catch (err) {
+        console.error("Fatale fout bij laden:", err);
+    }
 }
 
 async function saveState(forceRender = false) {
     berekenKlassement();
     if (forceRender) render(); 
-    // Push de update live naar Supabase zodat alle andere schermen meeverspringen
-    await supabaseClient.from('toernooi_data').update({ state: state }).eq('id', 1);
+    
+    // UPSERT: Maakt de regel aan als hij niet bestaat, updatet hem als hij wel bestaat!
+    const { error } = await supabaseClient.from('toernooi_data').upsert({ id: 1, state: state });
+    
+    if (error) {
+        console.error("Supabase Save Error:", error);
+        alert("⚠️ Fout bij doorsturen naar live dashboard! Check of je API key klopt en je de SQL code in Supabase hebt gerund.");
+    }
 }
 
 // Navigatie tussen TV Dashboard, Bord 1 en Bord 2
@@ -150,6 +168,7 @@ function renderDashboard() {
     let html = `
         <div class="dashboard-grid">
             
+            <!-- KOLOM 1: Live Borden & Wedstrijdschema -->
             <div class="grid-col">
                 ${generateLiveBoardHTML('BORD 1', activeB1)}
                 ${generateLiveBoardHTML('BORD 2', activeB2)}
@@ -169,6 +188,7 @@ function renderDashboard() {
                 </div>
             </div>
 
+            <!-- KOLOM 2: Live Klassement -->
             <div class="grid-col">
                 <div class="card" style="height: 100%;">
                     <h2>🏆 LIVE LEADERBOARD</h2>
@@ -185,6 +205,7 @@ function renderDashboard() {
                 </div>
             </div>
 
+            <!-- KOLOM 3: Uitgebreide TV Statistieken -->
             <div class="grid-col">
                 <div class="card" style="height: 100%; justify-content: space-around;">
                     <h2>📈 TOERNOOI STATS</h2>
@@ -364,7 +385,7 @@ window.submitScore = async function(matchId) {
     const oldScore = m[activeScoreStr];
     let newScore = oldScore - throwScore;
 
-    // --- BUST LOGICA (Weigeren van foutieve scores) ---
+    // --- BUST LOGICA ---
     if (newScore < 0 || newScore === 1) {
         state.stats[activePlayerName].totalDarts += 3;
         wisselBeurt(m);
@@ -374,7 +395,7 @@ window.submitScore = async function(matchId) {
         return;
     }
 
-    // --- LEG_GEWONNEN (Uitgegooid op precies 0) ---
+    // --- LEG_GEWONNEN (Uitgegooid) ---
     if (newScore === 0) {
         if(throwScore === 180) state.stats[activePlayerName].max180++;
         showModal(`
@@ -404,35 +425,32 @@ window.processLegWin = async function(matchId, checkoutScore, dartsThrown) {
     const winnerNum = m.turn;
     const winnerName = winnerNum === 1 ? m.p1 : m.p2;
 
-    // Statistieken voor de leg-winnaar updaten
+    // Statistieken updaten
     state.stats[winnerName].checkouts.push(checkoutScore);
     state.stats[winnerName].totalDarts += dartsThrown;
     state.stats[winnerName].totalScore += checkoutScore;
     
-    // Beide spelers krijgen er een gespeelde leg bij voor de statistieken
     state.stats[m.p1].legsPlayed++;
     state.stats[m.p2].legsPlayed++;
 
     if(winnerNum === 1) m.legs1++; else m.legs2++;
 
-    // Match afgelopen? (Best of 5 = 3 gewonnen legs)
+    // Match afgelopen? 
     if (m.legs1 === 3 || m.legs2 === 3) {
         m.status = 'finished';
         hideModal();
         alert(`🏆 MATCH WINNAAR: ${winnerName}!`);
         
-        // Breng navigatie terug en stuur tablet naar matchselectie
         document.getElementById('top-nav').style.display = 'flex';
         currentView = 'dashboard'; 
         await saveState(true);
         return;
     }
 
-    // Reset de scores naar 501 voor de volgende leg
+    // Reset voor volgende leg
     m.score1 = 501; m.score2 = 501;
     m.dartsThrown1 = 0; m.dartsThrown2 = 0;
     
-    // Wissel wie de volgende leg mag starten (reglementair)
     m.startThrower = m.startThrower === 1 ? 2 : 1;
     m.turn = m.startThrower;
 
@@ -444,31 +462,4 @@ function wisselBeurt(m) { m.turn = m.turn === 1 ? 2 : 1; }
 function showModal(html) { document.getElementById('modal-content').innerHTML = html; document.getElementById('action-modal').style.display = 'flex'; }
 function hideModal() { document.getElementById('action-modal').style.display = 'none'; }
 
-// --- FRIET / FINANCIEEL MODAL HELPER ---
-function setupFrietModal() {
-    const frietBtn = document.getElementById('friet-btn');
-    const frietModal = document.getElementById('friet-modal');
-    const closeModalBtn = document.getElementById('close-modal-btn');
-    const rekeningInhoud = document.getElementById('rekening-inhoud');
-    const rekeningNummerDisplay = document.getElementById('rekening-nummer-display');
-
-    if (frietBtn) frietBtn.addEventListener('click', () => { genereerRekening(rekeningNummerDisplay, rekeningInhoud); frietModal.style.display = 'flex'; });
-    if (closeModalBtn) closeModalBtn.addEventListener('click', () => { frietModal.style.display = 'none'; });
-    if (frietModal) frietModal.addEventListener('click', (e) => { if(e.target === frietModal) frietModal.style.display = 'none'; });
-}
-
-function genereerRekening(rekeningNummerDisplay, rekeningInhoud) {
-    rekeningNummerDisplay.innerText = financiën.rekeningNummer;
-    const collectGoPerPersoon = alleSpelers.length > 0 ? (financiën.collectAndGoTotaal / alleSpelers.length) : 0;
-
-    let html = `<p><strong>🛒 Collect & Go Totaal:</strong> €${financiën.collectAndGoTotaal.toFixed(2)}</p><p><strong>👥 Gedeeld door ${alleSpelers.length} spelers:</strong> €${collectGoPerPersoon.toFixed(2)} p.p.</p><table class="receipt-table"><tr><th>Speler</th><th>Frituur Bestelling</th><th>Te Betalen</th></tr>`;
-
-    alleSpelers.forEach(speler => {
-        let bestelling = financiën.bestellingen[speler] || { item: "Geen bestelling", prijs: 0.00 };
-        html += `<tr><td><strong>${speler}</strong></td><td style="font-size: 0.9em; color: #555;">${bestelling.item}<br>(€${bestelling.prijs.toFixed(2)})</td><td class="total-row">€${(collectGoPerPersoon + bestelling.prijs).toFixed(2)}</td></tr>`;
-    });
-    rekeningInhoud.innerHTML = html + `</table>`;
-}
-
-// Start de realtime motor!
 init();

@@ -39,6 +39,7 @@ async function init() {
                 state.stats[s].first9Darts = state.stats[s].first9Darts || 0;
                 state.stats[s].whitewashes = state.stats[s].whitewashes || 0;
                 state.stats[s].max180 = state.stats[s].max180 || 0;
+                if (!state.stats[s].checkouts) state.stats[s].checkouts = [];
             });
 
             state.matches.forEach(m => {
@@ -106,7 +107,7 @@ navButtons.forEach(btn => {
         else topNav.style.display = 'none';
         
         padInputString = "";
-        appContainer.innerHTML = ''; // Force redraw on view switch
+        appContainer.innerHTML = ''; 
         render();
     });
 });
@@ -203,22 +204,19 @@ function render() {
     }
 }
 
-// Bouwt 1x de HTML structuur, updates gebeuren op element niveau
 function buildDashboardSkeleton() {
     let html = `
     <div id="dashboard-wrapper" class="dashboard-layout">
         <div class="dashboard-top">
-            <!-- Col 1: Borden -->
             <div class="grid-col">
                 <div class="live-board" id="tv-b1"></div>
                 <div class="live-board" id="tv-b2"></div>
             </div>
-            <!-- Col 2: Klassement & Finales -->
             <div class="grid-col">
                 <div class="card" style="flex: 2.5;">
                     <h2>🏆 ALGEMEEN KLASSEMENT</h2>
                     <table class="retro-table">
-                        <thead><tr><th>#</th><th>Naam</th><th>W</th><th>V</th><th>PT</th><th>Saldo</th></tr></thead>
+                        <thead><tr><th>#</th><th>Naam</th><th>W</th><th>V</th><th>LV</th><th>LT</th><th>PT</th><th>Saldo</th></tr></thead>
                         <tbody id="tv-standings"></tbody>
                     </table>
                 </div>
@@ -227,17 +225,15 @@ function buildDashboardSkeleton() {
                     <div style="flex: 1; display:flex; flex-direction: column; justify-content: space-around;" id="tv-knockouts"></div>
                 </div>
             </div>
-            <!-- Col 3: 3x3 Stats Grid -->
             <div class="grid-col">
                 <div class="stats-grid" id="tv-stats-grid">
-                    ${[1,2,3,4,5,6,7,8,9].map(i => `<div class="stat-box" id="sb-${i}"></div>`).join('')}
+                    ${[1,2,3,4,5,6,7,8,9,10,11,12].map(i => `<div class="stat-box" id="sb-${i}"></div>`).join('')}
                 </div>
             </div>
         </div>
-        <!-- Bottom: Poule Logboek -->
         <div class="dashboard-bottom">
             <div class="card" style="width:100%; flex-direction: column;">
-                <h2>📋 POULE LOGBOEK (ALLE WEDSTRIJDEN)</h2>
+                <h2>📋 WEDSTRIJDSCHEMA</h2>
                 <div class="poule-grid">
                     <div class="poule-col" id="plog-1"></div>
                     <div class="poule-col" id="plog-2"></div>
@@ -293,8 +289,8 @@ function updateDashboardData() {
     if(b1El) { b1El.innerHTML = generateTVBoardHTML('🎯 BORD 1', activeB1); activeB1?b1El.classList.add('active'):b1El.classList.remove('active'); }
     if(b2El) { b2El.innerHTML = generateTVBoardHTML('🎯 BORD 2', activeB2); activeB2?b2El.classList.add('active'):b2El.classList.remove('active'); }
 
-    // Standings
-    let sHTML = state.standings.map((s, i) => `<tr class="${i===0?'leader-row':''}"><td>${i+1}</td><td style="text-align:left;"><b>${s.naam}</b></td><td>${s.w}</td><td>${s.v}</td><td class="punten-cel">${s.pt}</td><td>${s.saldo > 0 ? '+'+s.saldo : s.saldo}</td></tr>`).join('');
+    // Standings met LV en LT
+    let sHTML = state.standings.map((s, i) => `<tr class="${i===0?'leader-row':''}"><td>${i+1}</td><td style="text-align:left;"><b>${s.naam}</b></td><td>${s.w}</td><td>${s.v}</td><td>${s.legsV}</td><td>${s.legsT}</td><td class="punten-cel">${s.pt}</td><td>${s.saldo > 0 ? '+'+s.saldo : s.saldo}</td></tr>`).join('');
     if(document.getElementById('tv-standings')) document.getElementById('tv-standings').innerHTML = sHTML;
 
     // Knockouts
@@ -304,31 +300,52 @@ function updateDashboardData() {
     const koHtml = (t, m) => m ? `<div class="knockout-row" style="${(m.status==='playing'||m.status==='bullen')?'color:var(--neon-green);font-weight:bold;':''}"><span class="knockout-title">${t}</span><span style="flex:1; text-align:right;">${m.p1}</span><span style="padding:0 10px; font-weight:bold; color:var(--gold);">${m.status==='finished'?`${m.legs1}-${m.legs2}`:'vs'}</span><span style="flex:1; text-align:left;">${m.p2}</span></div>` : '';
     if(document.getElementById('tv-knockouts')) document.getElementById('tv-knockouts').innerHTML = koHtml('HF 1', hf1) + koHtml('HF 2', hf2) + koHtml('🏆 FINALE', fin);
 
-    // 9 Stats Grid
-    const top7 = (arr) => arr.sort((a,b) => b.val - a.val).slice(0,5); // Fit top 5 per box for space
+    // 12 Stats Grid (Toon nu ALLE 7 spelers voor overal!)
+    const top7 = (arr) => arr.sort((a,b) => b.val - a.val).slice(0,7); 
     const statBox = (t, d) => `<h3>${t}</h3><table class="retro-table">${d.map((x,i)=>`<tr><td style="width:20px;">${i+1}</td><td style="text-align:left;">${x.naam}</td><td style="font-weight:bold;">${x.txt||x.val}</td></tr>`).join('')}</table>`;
+
+    // Toernooi Top 7 checkouts overall
+    let allCheckouts = [];
+    alleSpelers.forEach(s => {
+        if(state.stats[s] && state.stats[s].checkouts) {
+            state.stats[s].checkouts.forEach(c => allCheckouts.push({naam: s, val: c}));
+        }
+    });
+    let d_hgo = top7(allCheckouts);
+
+    // Het NIEUWE blok: Totaal Pijlen & Gemiddelde Pijlen per Leg
+    let d_tot = top7(alleSpelers.map(s => {
+        let legs = state.stats[s]?.legsPlayed || 0;
+        let darts = state.stats[s]?.totalDarts || 0;
+        let avgLeg = legs > 0 ? (darts / legs).toFixed(1) : 0;
+        return { naam: s, val: darts, txt: `${darts} <span style="font-weight:normal;color:#888;">(${avgLeg}/L)</span>` };
+    }));
 
     let d_avg = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.totalDarts > 0 ? parseFloat(((state.stats[s].totalScore / state.stats[s].totalDarts)*3).toFixed(1)) : 0 })));
     let d_dbl = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.doubleAttempts > 0 ? Math.round((state.stats[s].doubleHits / state.stats[s].doubleAttempts)*100) : 0, txt: `${state.stats[s]?.doubleAttempts>0?Math.round((state.stats[s].doubleHits / state.stats[s].doubleAttempts)*100):0}%` })));
     let d_hgf = top7(alleSpelers.map(s => ({ naam: s, val: (state.stats[s]?.checkouts && state.stats[s].checkouts.length > 0) ? Math.max(...state.stats[s].checkouts) : 0 })));
-    let d_slg = alleSpelers.map(s => { let sl = state.stats[s]?.shortestLeg || { darts: 999 }; return { naam: s, val: sl.darts === 999 ? 0 : sl.darts }; }).filter(x => x.val > 0).sort((a,b) => a.val - b.val).slice(0,5);
+    let d_slg = alleSpelers.map(s => { let sl = state.stats[s]?.shortestLeg || { darts: 999 }; return { naam: s, val: sl.darts === 999 ? 0 : sl.darts }; }).filter(x => x.val > 0).sort((a,b) => a.val - b.val).slice(0,7);
     let d_mva = top7(alleSpelers.map(s => ({ naam: s, val: (state.stats[s]?.matchAvgs && state.stats[s].matchAvgs.length > 0) ? Math.max(...state.stats[s].matchAvgs) : 0 })));
     let d_f9a = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.first9Darts > 0 ? parseFloat(((state.stats[s].first9Score / state.stats[s].first9Darts)*3).toFixed(1)) : 0 })));
     let d_ton = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.tonPlus || 0 })));
     let d_180 = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.max180 || 0 })));
+    let d_brk = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.breaks || 0 })));
     let d_wws = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.whitewashes || 0 })));
 
     if(document.getElementById('sb-1')) document.getElementById('sb-1').innerHTML = statBox('3-Dart Avg', d_avg);
     if(document.getElementById('sb-2')) document.getElementById('sb-2').innerHTML = statBox('Double %', d_dbl);
-    if(document.getElementById('sb-3')) document.getElementById('sb-3').innerHTML = statBox('Hoogste Finish', d_hgf);
-    if(document.getElementById('sb-4')) document.getElementById('sb-4').innerHTML = statBox('Kortste Leg', d_slg);
-    if(document.getElementById('sb-5')) document.getElementById('sb-5').innerHTML = statBox('Top Match Avg', d_mva);
-    if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = statBox('First-9 Avg', d_f9a);
-    if(document.getElementById('sb-7')) document.getElementById('sb-7').innerHTML = statBox('Ton-Plus (100+)', d_ton);
-    if(document.getElementById('sb-8')) document.getElementById('sb-8').innerHTML = statBox('Max 180s', d_180);
-    if(document.getElementById('sb-9')) document.getElementById('sb-9').innerHTML = statBox('Whitewashes', d_wws);
+    if(document.getElementById('sb-3')) document.getElementById('sb-3').innerHTML = statBox('H.Finish (Toernooi)', d_hgo);
+    if(document.getElementById('sb-4')) document.getElementById('sb-4').innerHTML = statBox('H.Finish (Persoon)', d_hgf);
+    if(document.getElementById('sb-5')) document.getElementById('sb-5').innerHTML = statBox('Totaal Pijlen (Avg/L)', d_tot);
+    if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = statBox('Kortste Leg', d_slg);
+    if(document.getElementById('sb-7')) document.getElementById('sb-7').innerHTML = statBox('Top Match Avg', d_mva);
+    if(document.getElementById('sb-8')) document.getElementById('sb-8').innerHTML = statBox('First-9 Avg', d_f9a);
+    if(document.getElementById('sb-9')) document.getElementById('sb-9').innerHTML = statBox('Ton-Plus (100+)', d_ton);
+    if(document.getElementById('sb-10')) document.getElementById('sb-10').innerHTML = statBox('Max 180s', d_180);
+    if(document.getElementById('sb-11')) document.getElementById('sb-11').innerHTML = statBox('Meeste Breaks', d_brk);
+    if(document.getElementById('sb-12')) document.getElementById('sb-12').innerHTML = statBox('Whitewashes', d_wws);
 
-    // Poule Logboek
+    // Schema Logboek
     let pouleM = state.matches.filter(m => m.fase === 'poule');
     const rLg = (arr) => arr.map(m => `<div class="poule-item ${m.status==='playing'?'bezig':(m.status==='bullen'?'bullen':'klaar')}"><span>${m.p1.substring(0,3)} v ${m.p2.substring(0,3)}</span><span>${m.status==='playing'?`B${m.board==='board1'?1:2}`:(m.status==='bullen'?'Bullen':`${m.legs1}-${m.legs2}`)}</span></div>`).join('');
     if(document.getElementById('plog-1')) document.getElementById('plog-1').innerHTML = rLg(pouleM.slice(0, 7));
@@ -353,7 +370,6 @@ function updateTabletData(boardId) {
             
         state.matches.filter(x => x.status === 'waiting' && !x.p1.includes('Plaats') && !x.p1.includes('Winnaar')).forEach(x => {
             let label = x.fase === 'poule' ? 'POULE' : (x.fase === 'HF' ? 'HALVE FINALE' : 'FINALE');
-            // Check for Board-lock
             let isLocked = state.matches.some(busy => busy.status !== 'waiting' && busy.status !== 'finished' && busy.id !== x.id && (busy.p1===x.p1 || busy.p2===x.p1 || busy.p1===x.p2 || busy.p2===x.p2));
             if(isLocked) {
                 html += `<div class="match-option locked"><span>🔒 Speler is al bezig</span><span style="font-size:0.5em; display:block;">${label}</span>${x.p1} 🆚 ${x.p2}</div>`;
@@ -425,7 +441,7 @@ window.numpadDrukPref = function(val) { padInputString = val.toString(); documen
 window.koppelMatchAanBord = async function(mId, boardId) {
     const m = state.matches.find(x => x.id === mId);
     m.board = boardId; m.status = 'bullen';
-    appContainer.innerHTML = ''; // Force switch
+    appContainer.innerHTML = ''; 
     await saveState(true);
 };
 
@@ -528,7 +544,6 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
         if(m.turn === 1) m.legs1++; else m.legs2++;
         state.stats[m.p1].legsPlayed++; state.stats[m.p2].legsPlayed++;
 
-        // Trigger Overlay on TV
         state.lastCheckout = { name: aP, score: score, time: Date.now() };
 
         let targets = m.fase === 'poule' ? 3 : 4;

@@ -46,7 +46,6 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
     border-bottom: 2px solid var(--border); padding-bottom: 0.3vh; text-align: left; flex-shrink: 0;
 }
 
-/* Zilver en Goud Blokken */
 .silver-card { border-color: var(--silver); background: #16181d; }
 .silver-card h2 { color: var(--silver); border-bottom-color: var(--silver); }
 .gold-card { border-color: var(--gold); background: #1a1510; }
@@ -100,14 +99,14 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .poule-item.klaar { color: #666; }
 .winner-text { color: var(--gold); text-shadow: 0 0 5px var(--gold-glow); font-weight: bold; }
 
-/* --- FULL SCREEN FINISH OVERLAY --- */
+/* --- FULL SCREEN FINISH & RECORD OVERLAY --- */
 #finish-overlay {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(11, 12, 16, 0.95);
     z-index: 10000; display: flex; flex-direction: column; justify-content: center; align-items: center;
     opacity: 0; pointer-events: none; transition: opacity 0.3s ease-in-out;
 }
 #finish-overlay.show { opacity: 1; pointer-events: all; }
-.finish-title { font-size: 3rem; color: var(--text-main); text-transform: uppercase; margin-bottom: -20px; z-index: 2;}
+.finish-title { font-size: 4rem; color: var(--gold); text-transform: uppercase; margin-bottom: -20px; z-index: 2; text-shadow: 0 0 20px rgba(255, 183, 3, 0.5);}
 .finish-name { font-size: 10rem; color: #fff; text-shadow: 0 0 30px var(--gold); font-family: 'Oswald', sans-serif; text-transform: uppercase; line-height: 1; z-index: 3;}
 .finish-score { font-size: 5rem; color: var(--neon-green); font-family: 'Oswald', sans-serif; text-transform: uppercase; margin-top: 10px; z-index: 2; text-shadow: 0 0 20px rgba(6, 214, 160, 0.5);}
 
@@ -119,8 +118,10 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .match-option:not(.locked):hover { border-color: var(--gold); color: var(--gold); }
 
 .tablet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; flex: 1; height: 100%; }
-.pane { background: #151821; border: 3px solid #333; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1vh; transition: all 0.3s; }
-.pane.active { border-color: var(--gold); box-shadow: 0 0 20px var(--gold-glow); background: #1b1e2b; transform: scale(1.02); z-index: 2;}
+.pane { border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1vh; transition: all 0.3s; border: 3px solid transparent;}
+.pane.pane-active { border-color: var(--gold); box-shadow: 0 0 20px var(--gold-glow); background: #1b1e2b; transform: scale(1.02); z-index: 2;}
+.pane.pane-inactive { opacity: 0.3; filter: grayscale(80%); transform: scale(0.95); border-color: #222; background: #111; }
+
 .pane-name { font-size: 2.5rem; color: #fff; margin: 0; text-transform: uppercase; font-family: 'Oswald', sans-serif;}
 .pane-legs { font-size: 1.2rem; background: var(--gold); color: #000; font-weight: bold; padding: 2px 20px; border-radius: 4px; margin: 1vh 0; }
 .pane-score { font-size: 8rem; color: var(--text-light); margin: 0; line-height: 1; font-weight: bold; }

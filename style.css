@@ -31,7 +31,7 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 /* Navigatie */
 .top-nav {
     background-color: #151518; display: flex; justify-content: space-between; align-items: center;
-    padding: 1vh 2vw; border-bottom: 3px solid var(--gold); box-sizing: border-box;
+    padding: 1vh 2vw; border-bottom: 3px solid var(--gold); box-sizing: border-box; flex-shrink: 0;
 }
 .nav-title { font-size: clamp(1.2rem, 3vh, 2rem); color: var(--gold); text-transform: uppercase; }
 .nav-buttons { display: flex; gap: 1vw; }
@@ -41,7 +41,7 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 }
 .nav-btn.active, .nav-btn:hover { background: var(--gold); color: #000; border-color: var(--gold); }
 
-#app-container { flex: 1; padding: 1.5vh 1.5vw; box-sizing: border-box; height: calc(100vh - 10vh); }
+#app-container { flex: 1; padding: 1.5vh 1.5vw; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
 
 /* --- TV DASHBOARD PRESENTATIE LAY-OUT --- */
 .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5vw; height: 100%; }
@@ -51,7 +51,6 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
     background-color: var(--card-bg); border: 1px solid #2d3748; border-radius: 8px;
     padding: 1.5vh 1vw; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden;
 }
-/* FIX: flex-start zorgt ervoor dat titels NOOIT meer naar boven geduwd worden */
 .card.single { flex: 1; justify-content: flex-start; }
 
 .card h2 {
@@ -82,25 +81,18 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .retro-table tr.leader-row { background-color: rgba(255, 183, 3, 0.05); font-weight: bold; color: #fff; }
 .punten-cel { color: var(--gold); font-weight: bold; font-size: 1.2em; }
 
-/* Knockout Blok */
-.knockout-row {
-    display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #333; padding: 1vh 0; font-size: clamp(0.9rem, 2vh, 1.1rem);
-}
+.knockout-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #333; padding: 1vh 0; font-size: clamp(0.9rem, 2vh, 1.1rem); }
 .knockout-title { font-size: 0.8em; color: var(--gold); width: 80px; font-weight: bold; text-transform: uppercase;}
 
-.match-list-container { flex: 1; overflow-y: auto; }
-.match-item { display: flex; justify-content: space-between; padding: 0.6vh 0.5vw; border-bottom: 1px dashed #333; font-size: 0.95rem; }
-.match-item.bezig { color: var(--neon-green); font-weight: bold; }
-.match-item.bullen { color: var(--gold); font-weight: bold; }
-.match-item.klaar { color: #555; }
-
-/* --- TICKER TAPE --- */
-.ticker-wrap {
-    width: 100%; height: 4vh; background-color: #000; border-top: 2px solid var(--border); box-sizing: border-box; display: flex; align-items: center; overflow: hidden;
-}
-.ticker { display: inline-block; white-space: nowrap; padding-left: 100%; box-sizing: content-box; animation: ticker 25s linear infinite; }
-.ticker-item { display: inline-block; padding: 0 2rem; font-size: 1.2rem; color: var(--gold); font-family: 'Oswald', sans-serif; text-transform: uppercase; }
-@keyframes ticker { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
+/* Poule Logboek 3-Koloms Grid */
+.poule-grid { display: flex; width: 100%; height: 100%; gap: 10px; overflow: hidden; }
+.poule-col { flex: 1; display: flex; flex-direction: column; gap: 4px; border-right: 1px solid #333; padding-right: 5px; }
+.poule-col:last-child { border-right: none; padding-right: 0; }
+.poule-item { font-size: clamp(0.6rem, 1.2vh, 0.85rem); display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding: 2px 0; }
+.poule-item.bezig { color: var(--neon-green); font-weight: bold; }
+.poule-item.bullen { color: var(--gold); font-weight: bold; }
+.poule-item.klaar { color: #555; }
+.poule-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* --- TABLET INTERFACE --- */
 .tablet-view { display: flex; flex-direction: column; height: 100%; width: 100%; box-sizing: border-box; }
@@ -108,22 +100,24 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .match-option { background: var(--card-bg); border: 2px solid var(--border); color: #fff; padding: 2.5vh; font-size: 1.8rem; font-weight: bold; text-align: center; border-radius: 8px; cursor: pointer; }
 .match-option:hover { border-color: var(--gold); color: var(--gold); }
 
-.tablet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex: 1; height: 100%; }
-.pane { background: #151821; border: 3px solid #333; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2vh; }
+.tablet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; flex: 1; height: 100%; }
+.pane { background: #151821; border: 3px solid #333; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5vh; }
 .pane.active { border-color: var(--gold); box-shadow: 0 0 20px var(--gold-glow); background: #1b1e2b; }
-.pane-name { font-size: 3rem; color: #fff; margin: 0; text-transform: uppercase; }
-.pane-legs { font-size: 1.6rem; background: var(--gold); color: #000; font-weight: bold; padding: 2px 20px; border-radius: 4px; margin: 1vh 0; }
-.pane-score { font-size: 10rem; color: var(--text-light); margin: 0; line-height: 1; font-weight: bold; }
+.pane-name { font-size: 2.5rem; color: #fff; margin: 0; text-transform: uppercase; }
+.pane-legs { font-size: 1.4rem; background: var(--gold); color: #000; font-weight: bold; padding: 2px 20px; border-radius: 4px; margin: 1vh 0; }
+.pane-score { font-size: 8rem; color: var(--text-light); margin: 0; line-height: 1; font-weight: bold; }
 .pane-score.checkout-ready { color: var(--gold); }
-.pane-stats { font-size: 1.3rem; color: #888; margin-top: 1vh; }
+.pane-stats { font-size: 1.1rem; color: #888; margin-top: 1vh; }
 
-.numpad-container { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; background-color: #111216; padding: 15px; border-radius: 8px; border: 1px solid #333; }
-.numpad-field { grid-column: span 3; background: #000; border: 2px solid var(--border); border-radius: 6px; color: var(--gold); font-size: 3rem; font-weight: bold; display: flex; align-items: center; justify-content: center; height: 100%; }
-.numpad-container button { font-size: 2rem; background: #252833; color: #fff; border: 1px solid #444; border-radius: 6px; cursor: pointer; font-weight: bold; font-family: 'Oswald', sans-serif;}
-.numpad-container button:active { background: #555; }
-.numpad-container button.pre { background: #343a40; color: var(--gold); }
-.numpad-container button.action { background: var(--neon-green); color: #000; }
-.numpad-container button.clear { background: var(--neon-red); color: #fff; }
+.numpad-container { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 15px; background-color: #111216; padding: 15px; border-radius: 8px; border: 1px solid #333; }
+.numpad-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.numpad-grid button { font-size: 2.2rem; background: #252833; color: #fff; border: 2px solid #444; border-radius: 8px; cursor: pointer; font-weight: bold; font-family: 'Oswald', sans-serif; padding: 2.5vh 0; }
+.numpad-grid button:active { background: #555; border-color: #fff; }
+.numpad-grid button.pre { background: #343a40; color: var(--gold); border-color: #555; }
+.numpad-grid button.action { background: var(--neon-green); color: #000; border-color: var(--neon-green); }
+.numpad-grid button.clear { background: var(--neon-red); color: #fff; border-color: var(--neon-red); }
+
+.numpad-field { background: #000; border: 3px solid var(--border); border-radius: 8px; color: var(--gold); font-size: 4rem; font-weight: bold; display: flex; align-items: center; justify-content: center; height: 70px; font-family: 'Alfa Slab One', serif; }
 
 /* Modals */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.9); z-index: 9999; display: flex; justify-content: center; align-items: center; }

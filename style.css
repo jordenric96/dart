@@ -15,6 +15,22 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
     font-family: 'Oswald', sans-serif; letter-spacing: 1px;
 }
 
+/* --- NIEUW: Duidelijker lettertype voor alle cijfers & scores --- */
+.p-score, .pane-score, .finish-score, .numpad-field, .numpad-grid button {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
+}
+.p-legs, .p-avg, .pane-legs, .pane-stats, .live-timer-match, .live-timer-leg, .live-timer-tourney, .poule-item span {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
+}
+.retro-table td {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: clamp(0.85rem, 1.7vh, 1.1rem); /* Nog een fractie groter gemaakt */
+    padding: 0.3vh 0.4vw;
+}
+
 /* Navigatie */
 .top-nav {
     background-color: #151518; display: flex; justify-content: space-between; align-items: center;
@@ -58,14 +74,13 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(3, 1fr); gap: 0.8vw; height: 100%; }
 .stat-box { background: var(--bg-dim); border: 1px solid #333; border-radius: 6px; padding: 1vh 1vw; display: flex; flex-direction: column; overflow: hidden; justify-content: center;}
 .stat-box h3 { font-size: clamp(0.9rem, 1.8vh, 1.1rem); color: var(--border); margin: 0 0 0.5vh 0; text-align: center; text-transform: uppercase; border-bottom: 1px dashed #333; padding-bottom: 4px;}
-.stat-box .retro-table td { font-size: clamp(0.8rem, 1.6vh, 1rem); padding: 0.3vh 0.4vw; }
 
 /* Live Score Wedstrijdblokken */
 .live-board {
     background: linear-gradient(135deg, #1f2833 0%, #151a22 100%); border: 2px solid var(--border); border-radius: 8px; padding: 1vh 1vw; text-align: center; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: space-between; flex: 1.2;
 }
 .live-board.active { border-color: var(--gold); box-shadow: 0 0 15px var(--gold-glow); }
-.live-board h3 { margin: 0; font-size: 1rem; color: #fff; display: flex; justify-content: space-between; align-items: center; } /* Aangepast voor timers */
+.live-board h3 { margin: 0; font-size: 1rem; color: #fff; display: flex; justify-content: space-between; align-items: center; } 
 .live-score-row { display: flex; justify-content: space-around; align-items: stretch; margin-top: 1vh; flex: 1;}
 
 .player-col { display: flex; flex-direction: column; align-items: center; width: 45%; transition: all 0.3s ease;}
@@ -78,7 +93,7 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 
 .p-name { font-size: 1.2rem; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; transition: color 0.3s; font-family: 'Oswald', sans-serif;}
 .p-score { font-size: 3.5rem; font-weight: bold; line-height: 1; transition: color 0.3s; }
-.p-legs { font-size: 0.8rem; background: #000; padding: 2px 8px; border-radius: 4px; margin-bottom: 5px;}
+.p-legs { font-size: 0.8rem; background: #000; padding: 4px 8px; border-radius: 4px; margin-bottom: 5px;}
 .p-avg { font-size: 0.75rem; color: #aaa; margin-top: 5px;}
 
 .momentum-container { width: 100%; height: 6px; background: #111; border-radius: 3px; margin-top: 8px; overflow: hidden; border: 1px solid #333;}
@@ -111,7 +126,7 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 #finish-overlay.show { opacity: 1; pointer-events: all; }
 .finish-title { font-size: 4rem; color: var(--gold); text-transform: uppercase; margin-bottom: -20px; z-index: 2; text-shadow: 0 0 20px rgba(255, 183, 3, 0.5);}
 .finish-name { font-size: 10rem; color: #fff; text-shadow: 0 0 30px var(--gold); font-family: 'Oswald', sans-serif; text-transform: uppercase; line-height: 1; z-index: 3;}
-.finish-score { font-size: 5rem; color: var(--neon-green); font-family: 'Oswald', sans-serif; text-transform: uppercase; margin-top: 10px; z-index: 2; text-shadow: 0 0 20px rgba(6, 214, 160, 0.5);}
+.finish-score { font-size: 5rem; color: var(--neon-green); text-transform: uppercase; margin-top: 10px; z-index: 2; text-shadow: 0 0 20px rgba(6, 214, 160, 0.5);}
 
 /* --- TABLET INTERFACE --- */
 .tablet-view { display: flex; flex-direction: column; height: 100%; width: 100%; box-sizing: border-box; }
@@ -126,19 +141,19 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .pane.pane-inactive { opacity: 0.3; filter: grayscale(80%); transform: scale(0.95); border-color: #222; background: #111; }
 
 .pane-name { font-size: 2.5rem; color: #fff; margin: 0; text-transform: uppercase; font-family: 'Oswald', sans-serif;}
-.pane-legs { font-size: 1.2rem; background: var(--gold); color: #000; font-weight: bold; padding: 2px 20px; border-radius: 4px; margin: 1vh 0; }
+.pane-legs { font-size: 1.2rem; background: var(--gold); color: #000; font-weight: bold; padding: 4px 20px; border-radius: 4px; margin: 1vh 0; }
 .pane-score { font-size: 8rem; color: var(--text-light); margin: 0; line-height: 1; font-weight: bold; }
 .pane-score.checkout-ready { color: var(--gold); }
 .pane-stats { font-size: 1rem; color: #888; margin-top: 1vh; }
 
 .numpad-container { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 10px; background-color: #111216; padding: 10px; border-radius: 8px; border: 1px solid #333; }
 .numpad-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.numpad-grid button { font-size: 2.5rem; background: #252833; color: #fff; border: 2px solid #444; border-radius: 8px; cursor: pointer; font-weight: bold; font-family: 'Oswald', sans-serif; padding: 2vh 0; }
+.numpad-grid button { font-size: 2.5rem; background: #252833; color: #fff; border: 2px solid #444; border-radius: 8px; cursor: pointer; font-weight: bold; padding: 2vh 0; }
 .numpad-grid button:active { background: #555; border-color: #fff; }
 .numpad-grid button.pre { background: #343a40; color: var(--gold); border-color: #555; }
 .numpad-grid button.action { background: var(--neon-green); color: #000; border-color: var(--neon-green); }
 .numpad-grid button.clear { background: var(--neon-red); color: #fff; border-color: var(--neon-red); }
-.numpad-field { background: #000; border: 3px solid var(--border); border-radius: 8px; color: var(--gold); font-size: 4.5rem; font-weight: bold; display: flex; align-items: center; justify-content: center; height: 80px; font-family: 'Oswald', sans-serif; }
+.numpad-field { background: #000; border: 3px solid var(--border); border-radius: 8px; color: var(--gold); font-size: 4.5rem; font-weight: bold; display: flex; align-items: center; justify-content: center; height: 80px; }
 
 /* Modals */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.9); z-index: 9999; display: flex; justify-content: center; align-items: center; }

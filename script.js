@@ -9,7 +9,7 @@ let state = { matches: [], standings: [], stats: {}, lastCheckout: null };
 let currentView = 'dashboard';
 let padInputString = ""; 
 let windowLastCheckoutTime = 0;
-let logboekIndex = 0; // Voor de 10-seconden carrousel
+let logboekIndex = 0;
 
 const appContainer = document.getElementById('app-container');
 const navButtons = document.querySelectorAll('.nav-btn');
@@ -61,10 +61,9 @@ async function init() {
             await saveState(true);
         }
         
-        // Timer: 10 seconden roterend Wedstrijdschema
         setInterval(() => {
             if(currentView === 'dashboard') {
-                logboekIndex = (logboekIndex + 1) % 3; // 3 pagina's van 7 matchen
+                logboekIndex = (logboekIndex + 1) % 3;
                 updateLogboekOnly();
             }
         }, 10000);
@@ -225,18 +224,23 @@ function buildDashboardSkeleton() {
                 </div>
             </div>
             
-            <!-- Kolom 2: Klassement & Finales -->
+            <!-- Kolom 2: Klassement & Opgesplitste Finales -->
             <div class="grid-col">
-                <div class="card" style="flex: 2.5;">
+                <div class="card" style="flex: 2.1;">
                     <h2>🏆 ALGEMEEN KLASSEMENT</h2>
                     <table class="retro-table">
-                        <thead><tr><th>#</th><th>Naam</th><th>W</th><th>V</th><th>LV</th><th>LT</th><th>PT</th><th>Saldo</th></tr></thead>
+                        <!-- Nummers weg, 35% breedte voor de Naam -->
+                        <thead><tr><th style="width:35%; text-align:left;">Naam</th><th>W</th><th>V</th><th>LV</th><th>LT</th><th>PT</th><th>Saldo</th></tr></thead>
                         <tbody id="tv-standings"></tbody>
                     </table>
                 </div>
-                <div class="card" style="flex: 1; border-color: var(--gold); background: #1a1510;">
-                    <h2 style="color: #fff;">🔥 THE FINALS</h2>
-                    <div style="flex: 1; display:flex; flex-direction: column; justify-content: space-around;" id="tv-knockouts"></div>
+                <div class="card silver-card" style="flex: 1;">
+                    <h2>🥈 HALVE FINALES</h2>
+                    <div style="flex: 1; display:flex; flex-direction: column; justify-content: space-around;" id="tv-semi-finals"></div>
+                </div>
+                <div class="card gold-card" style="flex: 0.8;">
+                    <h2>🏆 DE FINALE</h2>
+                    <div style="flex: 1; display:flex; flex-direction: column; justify-content: space-around;" id="tv-finals"></div>
                 </div>
             </div>
             
@@ -326,21 +330,32 @@ function updateDashboardData() {
     if(b1El) { b1El.innerHTML = generateTVBoardHTML('🎯 BORD 1', activeB1); activeB1?b1El.classList.add('active'):b1El.classList.remove('active'); }
     if(b2El) { b2El.innerHTML = generateTVBoardHTML('🎯 BORD 2', activeB2); activeB2?b2El.classList.add('active'):b2El.classList.remove('active'); }
 
-    // Update het schema venster live
     updateLogboekOnly();
 
-    // Standings met LV en LT
-    let sHTML = state.standings.map((s, i) => `<tr class="${i===0?'leader-row':''}"><td>${i+1}</td><td style="text-align:left;"><b>${s.naam}</b></td><td>${s.w}</td><td>${s.v}</td><td>${s.legsV}</td><td>${s.legsT}</td><td class="punten-cel">${s.pt}</td><td>${s.saldo > 0 ? '+'+s.saldo : s.saldo}</td></tr>`).join('');
+    // Standings met Nummers weg
+    let sHTML = state.standings.map((s, i) => `<tr class="${i===0?'leader-row':''}">
+        <td style="text-align:left; font-weight:bold;">${s.naam}</td>
+        <td>${s.w}</td><td>${s.v}</td><td>${s.legsV}</td><td>${s.legsT}</td>
+        <td class="punten-cel">${s.pt}</td><td>${s.saldo > 0 ? '+'+s.saldo : s.saldo}</td>
+    </tr>`).join('');
     if(document.getElementById('tv-standings')) document.getElementById('tv-standings').innerHTML = sHTML;
 
-    // Knockouts
+    // Opgesplitste Knockouts (Zilver & Goud)
     let hf1 = state.matches.find(m => m.id === 'HF1');
     let hf2 = state.matches.find(m => m.id === 'HF2');
     let fin = state.matches.find(m => m.id === 'FIN');
-    const koHtml = (t, m) => m ? `<div class="knockout-row" style="${(m.status==='playing'||m.status==='bullen')?'color:var(--neon-green);font-weight:bold;':''}"><span class="knockout-title">${t}</span><span style="flex:1; text-align:right;">${m.p1}</span><span style="padding:0 10px; font-weight:bold; color:var(--gold);">${m.status==='finished'?`${m.legs1}-${m.legs2}`:'vs'}</span><span style="flex:1; text-align:left;">${m.p2}</span></div>` : '';
-    if(document.getElementById('tv-knockouts')) document.getElementById('tv-knockouts').innerHTML = koHtml('HF 1', hf1) + koHtml('HF 2', hf2) + koHtml('🏆 FINALE', fin);
+    
+    const koHtml = (t, m, colorClass) => m ? `<div class="knockout-row" style="${(m.status==='playing'||m.status==='bullen')?'color:var(--neon-green);font-weight:bold;':''}">
+        <span class="knockout-title" style="color:var(--${colorClass});">${t}</span>
+        <span style="flex:1; text-align:right;">${m.p1}</span>
+        <span style="padding:0 10px; font-weight:bold; color:var(--${colorClass});">${m.status==='finished'?`${m.legs1}-${m.legs2}`:'vs'}</span>
+        <span style="flex:1; text-align:left;">${m.p2}</span>
+    </div>` : '';
+    
+    if(document.getElementById('tv-semi-finals')) document.getElementById('tv-semi-finals').innerHTML = koHtml('HF 1', hf1, 'silver') + koHtml('HF 2', hf2, 'silver');
+    if(document.getElementById('tv-finals')) document.getElementById('tv-finals').innerHTML = koHtml('FINALE', fin, 'gold');
 
-    // 12 Stats Grid (Toon nu ALLE 7 spelers voor overal!)
+    // 12 Stats Grid (Alle 7 spelers per box)
     const top7 = (arr) => arr.sort((a,b) => b.val - a.val).slice(0,7); 
     const statBox = (t, d) => `<h3>${t}</h3><table class="retro-table">${d.map((x,i)=>`<tr><td style="width:15px;">${i+1}</td><td style="text-align:left;">${x.naam}</td><td style="font-weight:bold;text-align:right;">${x.txt||x.val}</td></tr>`).join('')}</table>`;
 

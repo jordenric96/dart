@@ -10,6 +10,8 @@ let currentView = 'dashboard';
 let padInputString = ""; 
 let windowLastOverlayTime = 0;
 let logboekIndex = 0;
+let statsPage = 0;
+let dashboardTimerMs = 0; // Centrale timer voor vlotte animaties en updates
 
 const appContainer = document.getElementById('app-container');
 const navButtons = document.querySelectorAll('.nav-btn');
@@ -29,11 +31,7 @@ async function init() {
         
         if (data && data.state && Object.keys(data.state).length > 0) {
             state = data.state;
-            
-            if (state.lastOverlay) {
-                windowLastOverlayTime = state.lastOverlay.time;
-            }
-
+            if (state.lastOverlay) windowLastOverlayTime = state.lastOverlay.time;
             if (!state.records) state.records = { highestCheckout: 0, shortestLeg: 999, highestMatchAvg: 0, highestScore: 0 };
             if (state.records.highestScore === undefined) state.records.highestScore = 0;
 
@@ -69,12 +67,31 @@ async function init() {
             await saveState(true);
         }
         
+        // Centrale Master Timer (elke 100ms)
         setInterval(() => {
             if(currentView === 'dashboard') {
-                logboekIndex = (logboekIndex + 1) % 3;
-                updateLogboekOnly();
+                dashboardTimerMs += 100;
+                
+                // Elke 10 sec het logboek updaten
+                if (dashboardTimerMs % 10000 === 0) {
+                    logboekIndex = (logboekIndex + 1) % 3;
+                    updateLogboekOnly();
+                }
+                
+                // Elke 15 sec de stat pagina updaten
+                if (dashboardTimerMs % 15000 === 0) {
+                    statsPage = (statsPage + 1) % 2;
+                    updateDashboardData();
+                }
+
+                // Aftelbalk live vullen
+                let bar = document.getElementById('stats-timer-bar');
+                if (bar) {
+                    let perc = ((dashboardTimerMs % 15000) / 15000) * 100;
+                    bar.style.width = perc + '%';
+                }
             }
-        }, 10000);
+        }, 100);
 
         render();
 
@@ -97,9 +114,8 @@ async function saveState(forceRender = false) {
 function checkOverlayTrigger() {
     if (state.lastOverlay && state.lastOverlay.time !== windowLastOverlayTime) {
         let isRecord = state.lastOverlay.title.includes('RECORD');
-        // Tablets negeren 'RECORD' overlays, TV toont ze wel!
         if (isRecord && currentView !== 'dashboard') {
-            // Niets doen op tablet
+            // Tablets tonen enkel reguliere checkouts, geen records
         } else {
             triggerOverlay(state.lastOverlay.title, state.lastOverlay.name, state.lastOverlay.subtitle);
         }
@@ -184,7 +200,6 @@ function initStatsKlassen() {
 function berekenKlassement() {
     let standings = alleSpelers.map(speler => ({ naam: speler, pt: 0, w: 0, v: 0, legsV: 0, legsT: 0, saldo: 0 }));
     
-    // Voeg ook post_match toe aan de berekening zodat het klassement na een uitgooi direct juist is
     state.matches.filter(m => m.fase === 'poule' && (m.status === 'finished' || m.status === 'post_match')).forEach(m => {
         let s1 = standings.find(s => s.naam === m.p1);
         let s2 = standings.find(s => s.naam === m.p2);
@@ -256,9 +271,11 @@ function buildDashboardSkeleton() {
                 </div>
             </div>
             
-            <div class="grid-col">
+            <!-- 2x3 Grid voor grote leesbare stats -->
+            <div class="grid-col" style="position:relative;">
+                <div class="stats-progress-container"><div class="stats-progress-fill" id="stats-timer-bar"></div></div>
                 <div class="stats-grid" id="tv-stats-grid">
-                    ${[1,2,3,4,5,6,7,8,9,10,11,12].map(i => `<div class="stat-box" id="sb-${i}"></div>`).join('')}
+                    ${[1,2,3,4,5,6].map(i => `<div class="stat-box" id="sb-${i}"></div>`).join('')}
                 </div>
             </div>
         </div>
@@ -270,7 +287,6 @@ function generateTVBoardHTML(title, match) {
     if (!match) return `<h3>${title}</h3><div style="flex:1; display:flex; align-items:center; justify-content:center; font-size:1.5rem; color:#444;">Bord Vrij</div>`;
     if (match.status === 'bullen') return `<h3>${title}</h3><div class="live-match-title">${match.p1} vs ${match.p2}</div><div style="flex:1; display:flex; align-items:center; justify-content:center; color:var(--gold); font-size:1.4rem;">🐂 BULLEN VOOR START 🐂</div>`;
     
-    // Post-Match Stat-Scherm voor op TV
     if (match.status === 'post_match') {
         let mAvg1 = match.matchDarts1 > 0 ? ((match.matchScore1 / match.matchDarts1) * 3).toFixed(2) : "0.00";
         let mAvg2 = match.matchDarts2 > 0 ? ((match.matchScore2 / match.matchDarts2) * 3).toFixed(2) : "0.00";
@@ -302,7 +318,6 @@ function generateTVBoardHTML(title, match) {
     let mom1 = Math.min(100, (match.dartsLeg1 / 24) * 100); 
     let mom2 = Math.min(100, (match.dartsLeg2 / 24) * 100); 
 
-    // Pijlen teller is toegevoegd!
     return `
         <h3>${title} <span style="font-size:0.5em; background:#444; padding:2px 8px; border-radius:4px; margin-left:10px;">${matchFase} | Leg ${match.legs1 + match.legs2 + 1}</span></h3>
         <div class="live-score-row">
@@ -356,7 +371,6 @@ function updateLogboekOnly() {
 }
 
 function updateDashboardData() {
-    // We tonen ook post_match op de borden!
     const activeB1 = state.matches.find(m => m.board === 'board1' && m.status !== 'finished' && m.status !== 'waiting');
     const activeB2 = state.matches.find(m => m.board === 'board2' && m.status !== 'finished' && m.status !== 'waiting');
     
@@ -388,7 +402,7 @@ function updateDashboardData() {
     if(document.getElementById('tv-semi-finals')) document.getElementById('tv-semi-finals').innerHTML = koHtml('HF 1', hf1, 'silver') + koHtml('HF 2', hf2, 'silver');
     if(document.getElementById('tv-finals')) document.getElementById('tv-finals').innerHTML = koHtml('FINALE', fin, 'gold');
 
-    // 12 Stats Grid 
+    // Stats Berekeningen (Top 7)
     const top7 = (arr) => arr.sort((a,b) => b.val - a.val).slice(0,7); 
     const statBox = (t, d) => `<h3>${t}</h3><table class="retro-table">${d.map((x,i)=>`<tr><td style="width:15px;">${i+1}</td><td style="text-align:left;">${x.naam}</td><td style="font-weight:bold;text-align:right;">${x.txt !== undefined ? x.txt : x.val}</td></tr>`).join('')}</table>`;
 
@@ -398,7 +412,6 @@ function updateDashboardData() {
     });
     let d_hgo = top7(allCheckouts);
 
-    // Alle Hoogste Scores van het toernooi verzamelen!
     let allScores = [];
     alleSpelers.forEach(s => {
         if(state.stats[s] && state.stats[s].highScores) state.stats[s].highScores.forEach(c => allScores.push({naam: s, val: c}));
@@ -442,7 +455,6 @@ function updateDashboardData() {
     let d_ton = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.tonPlus || 0 })));
     let d_brk = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.breaks || 0 })));
     
-    // Bulls Gewonnen (totaal + win %)
     let d_bul = top7(alleSpelers.map(s => {
         let bWon = state.stats[s]?.bullsWon || 0;
         let mStarted = state.matches.filter(m => (m.p1 === s || m.p2 === s) && ['playing', 'post_match', 'finished'].includes(m.status)).length;
@@ -450,18 +462,22 @@ function updateDashboardData() {
         return { naam: s, val: bWon, txt: `${bWon} <span style="font-weight:normal;color:#888;">(${perc}%)</span>` };
     }));
 
-    if(document.getElementById('sb-1')) document.getElementById('sb-1').innerHTML = statBox('3-Dart Avg', d_avg);
-    if(document.getElementById('sb-2')) document.getElementById('sb-2').innerHTML = statBox('Double %', d_dbl);
-    if(document.getElementById('sb-3')) document.getElementById('sb-3').innerHTML = statBox('H.Finish (Toernooi)', d_hgo);
-    if(document.getElementById('sb-4')) document.getElementById('sb-4').innerHTML = statBox('H.Finish (Persoon)', d_hgf);
-    if(document.getElementById('sb-5')) document.getElementById('sb-5').innerHTML = statBox('Totaal Pijlen (Avg/L)', d_tot);
-    if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = statBox('Kortste Leg', d_slg);
-    if(document.getElementById('sb-7')) document.getElementById('sb-7').innerHTML = statBox('Top Match Avg', d_mva);
-    if(document.getElementById('sb-8')) document.getElementById('sb-8').innerHTML = statBox('First-9 Avg', d_f9a);
-    if(document.getElementById('sb-9')) document.getElementById('sb-9').innerHTML = statBox('Ton-Plus (100+)', d_ton);
-    if(document.getElementById('sb-10')) document.getElementById('sb-10').innerHTML = statBox('Bulls Gewonnen', d_bul);
-    if(document.getElementById('sb-11')) document.getElementById('sb-11').innerHTML = statBox('Meeste Breaks', d_brk);
-    if(document.getElementById('sb-12')) document.getElementById('sb-12').innerHTML = statBox('Hoogste Score', d_hsc);
+    // Injecteer de juiste 6 blokken afhankelijk van statsPage (0 of 1)
+    if (statsPage === 0) {
+        if(document.getElementById('sb-1')) document.getElementById('sb-1').innerHTML = statBox('3-Dart Avg', d_avg);
+        if(document.getElementById('sb-2')) document.getElementById('sb-2').innerHTML = statBox('Double %', d_dbl);
+        if(document.getElementById('sb-3')) document.getElementById('sb-3').innerHTML = statBox('H.Finish (Toernooi)', d_hgo);
+        if(document.getElementById('sb-4')) document.getElementById('sb-4').innerHTML = statBox('H.Finish (Persoon)', d_hgf);
+        if(document.getElementById('sb-5')) document.getElementById('sb-5').innerHTML = statBox('Totaal Pijlen (Avg/L)', d_tot);
+        if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = statBox('Kortste Leg', d_slg);
+    } else {
+        if(document.getElementById('sb-1')) document.getElementById('sb-1').innerHTML = statBox('Top Match Avg', d_mva);
+        if(document.getElementById('sb-2')) document.getElementById('sb-2').innerHTML = statBox('First-9 Avg', d_f9a);
+        if(document.getElementById('sb-3')) document.getElementById('sb-3').innerHTML = statBox('Ton-Plus (100+)', d_ton);
+        if(document.getElementById('sb-4')) document.getElementById('sb-4').innerHTML = statBox('Bulls Gewonnen', d_bul);
+        if(document.getElementById('sb-5')) document.getElementById('sb-5').innerHTML = statBox('Meeste Breaks', d_brk);
+        if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = statBox('Hoogste Score', d_hsc);
+    }
 }
 
 function buildTabletSkeleton(boardId) {
@@ -662,7 +678,6 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
 
     let overlayQueue = [];
 
-    // Hoge scores loggen in de toernooilijst
     if (score >= 100) {
         state.stats[aP].highScores.push(score);
     }
@@ -701,8 +716,6 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
         m[dtLegStr] += dartsThrown; m[scLegStr] += score;
         m['matchDarts' + m.turn] += dartsThrown; m['matchScore' + m.turn] += score;
 
-        if(score >= 100) state.stats[aP].tonPlus++;
-
         if (m.turn !== m.startThrower) state.stats[aP].breaks++;
         if(m.turn === 1) m.legs1++; else m.legs2++;
         state.stats[m.p1].legsPlayed++; state.stats[m.p2].legsPlayed++;
@@ -725,7 +738,7 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
         let targets = m.fase === 'poule' ? 3 : 4;
 
         if(m.legs1 === targets || m.legs2 === targets) {
-            m.status = 'post_match'; // NIEUW: Post-Match fase gestart!
+            m.status = 'post_match'; 
             let mAvg1 = parseFloat(((m.matchScore1 / m.matchDarts1)*3).toFixed(2));
             let mAvg2 = parseFloat(((m.matchScore2 / m.matchDarts2)*3).toFixed(2));
             state.stats[m.p1].matchAvgs.push(mAvg1);
@@ -747,7 +760,6 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
             appContainer.innerHTML = '';
             await saveState(true);
             
-            // 25 Seconden wachten, dan automatisch afsluiten
             setTimeout(async () => {
                 const actM = state.matches.find(x => x.id === m.id);
                 if (actM && actM.status === 'post_match') {

@@ -263,8 +263,8 @@ function generateTVBoardHTML(title, match) {
     if (!match) return `<h3>${title}</h3><div style="flex:1; display:flex; align-items:center; justify-content:center; font-size:1.5rem; color:#444;">Bord Vrij</div>`;
     if (match.status === 'bullen') return `<h3>${title}</h3><div class="live-match-title">${match.p1} vs ${match.p2}</div><div style="flex:1; display:flex; align-items:center; justify-content:center; color:var(--gold); font-size:1.4rem;">🐂 BULLEN VOOR START 🐂</div>`;
     
-    let avg1 = match.matchDarts1 > 0 ? ((match.matchScore1 / match.matchDarts1) * 3).toFixed(1) : "0.0";
-    let avg2 = match.matchDarts2 > 0 ? ((match.matchScore2 / match.matchDarts2) * 3).toFixed(1) : "0.0";
+    let avg1 = match.matchDarts1 > 0 ? ((match.matchScore1 / match.matchDarts1) * 3).toFixed(2) : "0.00";
+    let avg2 = match.matchDarts2 > 0 ? ((match.matchScore2 / match.matchDarts2) * 3).toFixed(2) : "0.00";
     let matchFase = match.fase === 'poule' ? 'Best of 5' : 'Best of 7';
 
     let active1 = match.turn === 1 ? 'turn-active' : 'turn-inactive';
@@ -359,7 +359,7 @@ function updateDashboardData() {
 
     // 12 Stats Grid 
     const top7 = (arr) => arr.sort((a,b) => b.val - a.val).slice(0,7); 
-    const statBox = (t, d) => `<h3>${t}</h3><table class="retro-table">${d.map((x,i)=>`<tr><td style="width:15px;">${i+1}</td><td style="text-align:left;">${x.naam}</td><td style="font-weight:bold;text-align:right;">${x.txt||x.val}</td></tr>`).join('')}</table>`;
+    const statBox = (t, d) => `<h3>${t}</h3><table class="retro-table">${d.map((x,i)=>`<tr><td style="width:15px;">${i+1}</td><td style="text-align:left;">${x.naam}</td><td style="font-weight:bold;text-align:right;">${x.txt !== undefined ? x.txt : x.val}</td></tr>`).join('')}</table>`;
 
     let allCheckouts = [];
     alleSpelers.forEach(s => {
@@ -370,16 +370,33 @@ function updateDashboardData() {
     let d_tot = top7(alleSpelers.map(s => {
         let legs = state.stats[s]?.legsPlayed || 0;
         let darts = state.stats[s]?.totalDarts || 0;
-        let avgLeg = legs > 0 ? (darts / legs).toFixed(1) : 0;
+        let avgLeg = legs > 0 ? (darts / legs).toFixed(2) : "0.00";
         return { naam: s, val: darts, txt: `${darts} <span style="font-weight:normal;color:#888;">(${avgLeg}/L)</span>` };
     }));
 
-    let d_avg = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.totalDarts > 0 ? parseFloat(((state.stats[s].totalScore / state.stats[s].totalDarts)*3).toFixed(1)) : 0 })));
-    let d_dbl = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.doubleAttempts > 0 ? Math.round((state.stats[s].doubleHits / state.stats[s].doubleAttempts)*100) : 0, txt: `${state.stats[s]?.doubleAttempts>0?Math.round((state.stats[s].doubleHits / state.stats[s].doubleAttempts)*100):0}%` })));
+    let d_avg = top7(alleSpelers.map(s => {
+        let v = state.stats[s]?.totalDarts > 0 ? ((state.stats[s].totalScore / state.stats[s].totalDarts)*3) : 0;
+        return { naam: s, val: v, txt: v.toFixed(2) };
+    }));
+
+    let d_dbl = top7(alleSpelers.map(s => {
+        let v = state.stats[s]?.doubleAttempts > 0 ? ((state.stats[s].doubleHits / state.stats[s].doubleAttempts)*100) : 0;
+        return { naam: s, val: v, txt: `${v.toFixed(2)}%` };
+    }));
+
     let d_hgf = top7(alleSpelers.map(s => ({ naam: s, val: (state.stats[s]?.checkouts && state.stats[s].checkouts.length > 0) ? Math.max(...state.stats[s].checkouts) : 0 })));
     let d_slg = alleSpelers.map(s => { let sl = state.stats[s]?.shortestLeg || { darts: 999 }; return { naam: s, val: sl.darts === 999 ? 0 : sl.darts }; }).filter(x => x.val > 0).sort((a,b) => a.val - b.val).slice(0,7);
-    let d_mva = top7(alleSpelers.map(s => ({ naam: s, val: (state.stats[s]?.matchAvgs && state.stats[s].matchAvgs.length > 0) ? Math.max(...state.stats[s].matchAvgs) : 0 })));
-    let d_f9a = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.first9Darts > 0 ? parseFloat(((state.stats[s].first9Score / state.stats[s].first9Darts)*3).toFixed(1)) : 0 })));
+    
+    let d_mva = top7(alleSpelers.map(s => {
+        let v = (state.stats[s]?.matchAvgs && state.stats[s].matchAvgs.length > 0) ? Math.max(...state.stats[s].matchAvgs) : 0;
+        return { naam: s, val: v, txt: v.toFixed(2) };
+    }));
+
+    let d_f9a = top7(alleSpelers.map(s => {
+        let v = state.stats[s]?.first9Darts > 0 ? ((state.stats[s].first9Score / state.stats[s].first9Darts)*3) : 0;
+        return { naam: s, val: v, txt: v.toFixed(2) };
+    }));
+
     let d_ton = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.tonPlus || 0 })));
     let d_180 = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.max180 || 0 })));
     let d_brk = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.breaks || 0 })));
@@ -393,7 +410,7 @@ function updateDashboardData() {
     if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = statBox('Kortste Leg', d_slg);
     if(document.getElementById('sb-7')) document.getElementById('sb-7').innerHTML = statBox('Top Match Avg', d_mva);
     if(document.getElementById('sb-8')) document.getElementById('sb-8').innerHTML = statBox('First-9 Avg', d_f9a);
-    if(document.getElementById('sb-9')) document.getElementById('sb-9').innerHTML = statBox('Ton-Plus', d_ton);
+    if(document.getElementById('sb-9')) document.getElementById('sb-9').innerHTML = statBox('Ton-Plus (100+)', d_ton);
     if(document.getElementById('sb-10')) document.getElementById('sb-10').innerHTML = statBox('Max 180s', d_180);
     if(document.getElementById('sb-11')) document.getElementById('sb-11').innerHTML = statBox('Meeste Breaks', d_brk);
     if(document.getElementById('sb-12')) document.getElementById('sb-12').innerHTML = statBox('Hoogste Score', d_hsc);
@@ -441,8 +458,8 @@ function updateTabletData(boardId) {
     }
 
     if (m.status === 'playing') {
-        let avg1 = m.matchDarts1 > 0 ? ((m.matchScore1 / m.matchDarts1) * 3).toFixed(1) : "0.0";
-        let avg2 = m.matchDarts2 > 0 ? ((m.matchScore2 / m.matchDarts2) * 3).toFixed(1) : "0.0";
+        let avg1 = m.matchDarts1 > 0 ? ((m.matchScore1 / m.matchDarts1) * 3).toFixed(2) : "0.00";
+        let avg2 = m.matchDarts2 > 0 ? ((m.matchScore2 / m.matchDarts2) * 3).toFixed(2) : "0.00";
         let titleStr = m.fase === 'poule' ? 'FIRST TO 3 LEGS (BO5)' : '🔥 FIRST TO 4 LEGS (BO7)';
 
         wrap.innerHTML = `
@@ -521,7 +538,6 @@ window.verwerkIngevuldeScore = async function(mId) {
     const oldScore = m.turn === 1 ? m.score1 : m.score2;
     let newScore = oldScore - score;
 
-    // FIX: Enkel Double Tracking tonen als de overgebleven score 50 of lager is (inclusief bust).
     if (oldScore <= 170 && newScore <= 50) {
         let isHit = (newScore === 0);
         showModal(`
@@ -559,12 +575,10 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
 
     let overlayQueue = [];
 
-    // Track persoonlijke hoogste score
     if (score > state.stats[aP].highestScore) {
         state.stats[aP].highestScore = score;
     }
 
-    // TOERNOOI RECORD SCORES (Zelfs voor een score van 5)
     if (score > state.records.highestScore) {
         state.records.highestScore = score;
         overlayQueue.push({ title: "NIEUW RECORD!", name: aP, subtitle: score + " HOOGSTE SCORE" });
@@ -606,19 +620,16 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
         if(m.turn === 1) m.legs1++; else m.legs2++;
         state.stats[m.p1].legsPlayed++; state.stats[m.p2].legsPlayed++;
 
-        // Standaard Checkout Overlay
         overlayQueue.push({ title: "CHECKOUT!", name: aP, subtitle: score + " FINISH" });
 
-        // Record Checkout Overlay
         if (score > state.records.highestCheckout) {
             state.records.highestCheckout = score;
             overlayQueue.push({ title: "RECORD FINISH!", name: aP, subtitle: score + " CHECKOUT" });
         }
 
-        let legAvg = ((m[scLegStr] / m[dtLegStr]) * 3).toFixed(1);
+        let legAvg = ((m[scLegStr] / m[dtLegStr]) * 3).toFixed(2);
         if (m[dtLegStr] < state.stats[aP].shortestLeg.darts) state.stats[aP].shortestLeg = { darts: m[dtLegStr], avg: legAvg };
         
-        // Record Kortste Leg Overlay
         if (m[dtLegStr] < state.records.shortestLeg) {
             state.records.shortestLeg = m[dtLegStr];
             overlayQueue.push({ title: "RECORD KORTSTE LEG!", name: aP, subtitle: m[dtLegStr] + " PIJLEN" });
@@ -628,18 +639,17 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
 
         if(m.legs1 === targets || m.legs2 === targets) {
             m.status = 'finished';
-            let mAvg1 = parseFloat(((m.matchScore1 / m.matchDarts1)*3).toFixed(1));
-            let mAvg2 = parseFloat(((m.matchScore2 / m.matchDarts2)*3).toFixed(1));
+            let mAvg1 = parseFloat(((m.matchScore1 / m.matchDarts1)*3).toFixed(2));
+            let mAvg2 = parseFloat(((m.matchScore2 / m.matchDarts2)*3).toFixed(2));
             state.stats[m.p1].matchAvgs.push(mAvg1);
             state.stats[m.p2].matchAvgs.push(mAvg2);
 
-            // Record Match Avg Overlay
             if (m.turn === 1 && mAvg1 > state.records.highestMatchAvg) {
                  state.records.highestMatchAvg = mAvg1;
-                 overlayQueue.push({ title: "RECORD MATCH AVG!", name: m.p1, subtitle: mAvg1 + " AVG" });
+                 overlayQueue.push({ title: "RECORD MATCH AVG!", name: m.p1, subtitle: mAvg1.toFixed(2) + " AVG" });
             } else if (m.turn === 2 && mAvg2 > state.records.highestMatchAvg) {
                  state.records.highestMatchAvg = mAvg2;
-                 overlayQueue.push({ title: "RECORD MATCH AVG!", name: m.p2, subtitle: mAvg2 + " AVG" });
+                 overlayQueue.push({ title: "RECORD MATCH AVG!", name: m.p2, subtitle: mAvg2.toFixed(2) + " AVG" });
             }
 
             if (overlayQueue.length > 0) {

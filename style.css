@@ -20,71 +20,82 @@ body {
     flex-direction: column;
     height: 100vh;
     overflow: hidden; 
-    box-sizing: border-box;
 }
 
 h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase; margin: 0.5vh 0; letter-spacing: 1px; text-align: center; }
 
-/* --- NAVIGATIE BOVENAAN --- */
+/* --- NAVIGATIE --- */
 .top-nav {
-    background-color: var(--border-color);
-    color: var(--accent-color);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 20px;
-    box-shadow: 0 4px 0px 0px rgba(0,0,0,0.5);
-    z-index: 10;
+    background-color: var(--border-color); color: var(--accent-color);
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.5vh 1vw; box-shadow: 0 4px 0px 0px rgba(0,0,0,0.5); z-index: 10;
 }
 .nav-title { font-family: 'Alfa Slab One', serif; font-size: 1.5em; color: var(--highlight-color); }
 .nav-btn {
     background: transparent; color: white; border: 2px solid white; border-radius: 5px;
-    padding: 5px 15px; font-family: 'Alfa Slab One', serif; cursor: pointer; margin-left: 10px;
-    transition: 0.2s;
+    padding: 5px 15px; font-family: 'Alfa Slab One', serif; cursor: pointer; margin-left: 10px; transition: 0.2s;
 }
 .nav-btn.active, .nav-btn:hover { background: var(--highlight-color); color: var(--border-color); border-color: var(--highlight-color); }
 
-#app-container { flex: 1; padding: 2vh 2vw; overflow-y: auto; }
+#app-container { flex: 1; padding: 1vh 1vw; height: calc(100vh - 60px); box-sizing: border-box;}
 
 /* --- ALGEMENE KADERS --- */
 .card {
-    background-color: var(--accent-color); border: 4px solid var(--border-color); border-radius: 8px;
-    padding: 1vh 1vw; margin-bottom: 1vh; box-shadow: 4px 4px 0px 0px var(--border-color); text-align: center;
+    background-color: var(--accent-color); border: 3px solid var(--border-color); border-radius: 8px;
+    padding: 1vh 0.5vw; margin-bottom: 1vh; box-shadow: 3px 3px 0px 0px var(--border-color);
+    display: flex; flex-direction: column;
 }
+.card h2 { font-size: clamp(1rem, 2.5vh, 1.5rem); background: var(--border-color); color: var(--highlight-color); margin: -1vh -0.5vw 1vh -0.5vw; padding: 0.5vh 0; border-radius: 4px 4px 0 0; }
+.card h3 { font-size: clamp(0.9rem, 2vh, 1.2rem); margin-top: 1vh; border-bottom: 2px dashed #ccc; display: inline-block; padding: 0 1vw;}
+
 .retro-button { font-family: 'Alfa Slab One', serif; background-color: var(--highlight-color); color: var(--border-color); border: 3px solid var(--border-color); padding: 10px 20px; font-size: 1.2rem; border-radius: 6px; cursor: pointer; box-shadow: 3px 3px 0px 0px var(--border-color); }
 .retro-button:active { box-shadow: 0px 0px 0px 0px var(--border-color); transform: translate(3px, 3px); }
 .danger { background-color: var(--red-alert); color: white; }
 .success { background-color: var(--green-ok); color: white; }
 
-.retro-table { width: 100%; border-collapse: collapse; margin-bottom: 0.5vh; font-size: clamp(0.8rem, 2vh, 1.2rem); }
-.retro-table th, .retro-table td { border: 2px solid var(--border-color); padding: 5px; text-align: center; }
-.retro-table th { background-color: var(--border-color); color: var(--accent-color); font-family: 'Alfa Slab One', serif; }
+/* Ultra compacte tabellen voor het dashboard */
+.retro-table { width: 100%; border-collapse: collapse; font-size: clamp(0.7rem, 1.6vh, 1rem); }
+.retro-table th, .retro-table td { border: 1px solid #ccc; padding: 0.3vh 0.2vw; text-align: center; }
+.retro-table th { background-color: #333; color: var(--accent-color); font-family: 'Alfa Slab One', serif; font-size: 0.9em; }
+.punten-cel { font-weight: bold; font-size: 1.2em; background-color: #eee; }
 
-/* --- DASHBOARD GRID (LAPTOP) --- */
-.dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 2vw; height: 100%; }
-.live-matches { display: flex; gap: 2vw; margin-bottom: 2vh; }
-.live-board { flex: 1; border: 4px solid var(--highlight-color); background: #fff; border-radius: 10px; padding: 10px; box-shadow: 5px 5px 0px 0px var(--border-color); text-align: center; }
-.live-score { font-family: 'Alfa Slab One', serif; font-size: 3em; display: flex; justify-content: space-around; align-items: center; margin: 10px 0; }
-.live-legs { font-size: 0.4em; color: #555; background: #eee; padding: 5px 10px; border-radius: 5px; }
+/* --- TV DASHBOARD GRID (3 Kolommen) --- */
+.dashboard-grid { 
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1vw; height: 100%; 
+}
+.grid-col { display: flex; flex-direction: column; height: 100%; overflow: hidden;}
 
-/* --- 501 TABLET SCHERM (BORD 1 & 2) --- */
+/* Live Boards op Dashboard */
+.live-board { border: 4px solid var(--highlight-color); background: #fff; border-radius: 10px; padding: 0.5vh 1vw; box-shadow: 5px 5px 0px 0px var(--border-color); text-align: center; margin-bottom: 1vh;}
+.live-board h3 { margin: 0 0 0.5vh 0; background: none; border: none; font-size: 1.5em; color: var(--border-color);}
+.live-score { font-family: 'Alfa Slab One', serif; font-size: clamp(2rem, 5vh, 4rem); display: flex; justify-content: space-around; align-items: center; margin: 0; line-height: 1; }
+.live-legs { font-size: 0.4em; color: #555; background: #eee; padding: 2px 8px; border-radius: 5px; vertical-align: middle;}
+
+/* Wedstrijden lijst */
+.match-list-container { flex: 1; overflow-y: auto; padding-right: 0.5vw; }
+.match-list-container::-webkit-scrollbar { display: none; }
+.match-item { font-size: clamp(0.8rem, 1.8vh, 1.1rem); display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc; padding: 0.5vh 0; }
+.match-item.bezig { font-weight: bold; color: var(--red-alert); }
+.match-item.bullen { font-weight: bold; color: var(--green-ok); }
+.match-item.klaar { color: #888; }
+
+/* --- TABLET 501 ENGINE --- */
 .tablet-view { display: flex; flex-direction: column; height: 100%; max-width: 1000px; margin: 0 auto; }
-.board-header { font-size: 2em; margin-bottom: 10px; }
-.match-selector { display: flex; flex-direction: column; gap: 10px; }
-.match-option { background: #fff; border: 3px solid var(--border-color); padding: 15px; font-size: 1.5em; cursor: pointer; border-radius: 8px; font-family: 'Alfa Slab One', serif; transition: 0.2s; }
+.board-header { font-size: 2.5em; margin-bottom: 10px; }
+.match-selector { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-bottom: 20px;}
+.match-option { background: #fff; border: 3px solid var(--border-color); padding: 15px; font-size: 1.5em; cursor: pointer; border-radius: 8px; font-family: 'Alfa Slab One', serif; transition: 0.2s; text-align: center;}
 .match-option:hover { background: var(--highlight-color); }
 
 .scoring-area { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex: 1; }
-.player-pane { border: 5px solid var(--border-color); border-radius: 15px; background: #fff; display: flex; flex-direction: column; align-items: center; padding: 20px; position: relative; }
+.player-pane { border: 5px solid var(--border-color); border-radius: 15px; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; position: relative; }
 .player-pane.active-turn { border-color: var(--highlight-color); box-shadow: 0 0 20px rgba(255,230,0,0.8); background: #ffffe6; }
-.p-name { font-size: 2.5em; font-family: 'Alfa Slab One', serif; margin: 0; }
+.p-name { font-size: 3em; font-family: 'Alfa Slab One', serif; margin: 0; }
 .p-legs { font-size: 1.5em; background: #333; color: #fff; padding: 5px 20px; border-radius: 5px; margin: 10px 0; font-family: 'Alfa Slab One', serif; }
-.p-score { font-size: 8em; font-family: 'Alfa Slab One', serif; margin: 20px 0; line-height: 1; }
-.p-stats { font-size: 1.2em; color: #666; margin-top: auto; }
+.p-score { font-size: 12em; font-family: 'Alfa Slab One', serif; margin: 0; line-height: 1; }
 
-.input-section { grid-column: 1 / -1; display: flex; justify-content: center; align-items: center; gap: 15px; background: var(--border-color); padding: 15px; border-radius: 10px; margin-top: 10px;}
+.input-section { grid-column: 1 / -1; display: flex; justify-content: center; align-items: center; gap: 15px; background: var(--border-color); padding: 15px; border-radius: 10px; margin-bottom: 10px;}
 .score-input-field { font-size: 3em; font-family: 'Alfa Slab One', serif; width: 150px; text-align: center; border: 4px solid var(--highlight-color); border-radius: 10px; }
 
-/* Modal (Pop-ups) */
+/* Modal */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex; justify-content: center; align-items: center; }
-.retro-receipt { background-color: #fff; border: 6px solid var(--border-color); border-radius: 10px; padding: 30px; width: 90%; max-width: 500px; box-shadow: 10px 10px 0px 0px var(--highlight-color); text-align: center; }
+.retro-receipt { background-color: #fff; border: 6px solid var(--border-color); border-radius: 10px; padding: 30px; width: 90%; max-width: 600px; box-shadow: 10px 10px 0px 0px var(--highlight-color); text-align: center; }

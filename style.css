@@ -32,8 +32,8 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 
 /* --- TV DASHBOARD PRESENTATIE LAY-OUT --- */
 .dashboard-layout { display: flex; flex-direction: column; gap: 1.5vh; height: 100%; }
-.dashboard-top { display: grid; grid-template-columns: 1.1fr 1fr 1.6fr; gap: 1vw; flex: 2.2; overflow: hidden; }
-.dashboard-bottom { flex: 1; display: flex; overflow: hidden; }
+.dashboard-top { display: grid; grid-template-columns: 1.1fr 1fr 1.6fr; gap: 1vw; flex: 2.8; overflow: hidden; } /* Focus op top */
+.dashboard-bottom { flex: 0.9; display: flex; overflow: hidden; } /* Schema kleiner */
 
 .grid-col { display: flex; flex-direction: column; gap: 1.5vh; height: 100%; overflow: hidden; }
 
@@ -47,10 +47,11 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
     border-bottom: 2px solid var(--border); padding-bottom: 0.3vh; text-align: left; flex-shrink: 0;
 }
 
-/* 3x3 Stats Grid */
-.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 0.5vw; height: 100%; }
-.stat-box { background: var(--bg-dim); border: 1px solid #333; border-radius: 6px; padding: 0.5vh; display: flex; flex-direction: column; overflow: hidden;}
-.stat-box h3 { font-size: 0.75rem; color: var(--border); margin: 0 0 0.5vh 0; text-align: center; text-transform: uppercase; border-bottom: 1px dashed #333; padding-bottom: 2px;}
+/* NIEUW 2x5 Stats Grid */
+.stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(5, 1fr); gap: 0.5vw; height: 100%; }
+.stat-box { background: var(--bg-dim); border: 1px solid #333; border-radius: 6px; padding: 0.3vh 0.5vh; display: flex; flex-direction: column; overflow: hidden; justify-content: center;}
+.stat-box h3 { font-size: 0.75rem; color: var(--border); margin: 0 0 0.2vh 0; text-align: center; text-transform: uppercase; border-bottom: 1px dashed #333; padding-bottom: 2px;}
+.stat-box .retro-table td { font-size: 0.75rem; padding: 0.1vh 0.2vw; }
 
 /* Live Score Wedstrijdblokken (Focus & Momentum) */
 .live-board {
@@ -80,7 +81,7 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 /* Tabellen */
 .retro-table { width: 100%; border-collapse: collapse; font-size: clamp(0.7rem, 1.4vh, 0.95rem); table-layout: fixed; }
 .retro-table th, .retro-table td { padding: 0.4vh 0.2vw; text-align: center; white-space: nowrap; border-bottom: 1px solid #2d3748; overflow: hidden; text-overflow: ellipsis;}
-.retro-table th { color: var(--border); font-size: 1em; }
+.retro-table th { color: var(--border); font-size: 0.9em; }
 .retro-table tr:nth-child(even) { background-color: rgba(255,255,255,0.02); }
 .retro-table tr.leader-row { background-color: rgba(255, 183, 3, 0.05); font-weight: bold; color: #fff; }
 .punten-cel { color: var(--gold); font-weight: bold; font-size: 1.1em; }
@@ -88,11 +89,11 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .knockout-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #333; padding: 0.8vh 0; font-size: clamp(0.8rem, 1.6vh, 1rem); }
 .knockout-title { font-size: 0.8em; color: var(--gold); width: 80px; font-weight: bold; text-transform: uppercase;}
 
-/* Poule Logboek 3-Koloms Grid */
+/* Wedstrijdschema Logboek 3-Koloms Grid (Kleiner gemaakt) */
 .poule-grid { display: flex; width: 100%; height: 100%; gap: 10px; overflow: hidden; }
 .poule-col { flex: 1; display: flex; flex-direction: column; justify-content: space-around; border-right: 1px solid #333; padding-right: 5px; }
 .poule-col:last-child { border-right: none; padding-right: 0; }
-.poule-item { font-size: clamp(0.7rem, 1.4vh, 0.9rem); display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding: 2px 0; }
+.poule-item { font-size: clamp(0.6rem, 1.2vh, 0.8rem); display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding: 1px 0; }
 .poule-item.bezig { color: var(--neon-green); font-weight: bold; }
 .poule-item.bullen { color: var(--gold); font-weight: bold; }
 .poule-item.klaar { color: #666; }

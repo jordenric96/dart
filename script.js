@@ -4,7 +4,7 @@ const supabaseKey = 'JOUW_SUPABASE_API_KEY_HIER';
 const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 // --------------------------------------------
 
-// 7 Spelers
+// 7 Spelers (Round Robin = 21 matchen)
 const alleSpelers = ["Jorden", "Yarni", "Joël", "Vince", "Stefaan", "Wim", "Tibe"];
 
 let state = {
@@ -19,7 +19,7 @@ const navButtons = document.querySelectorAll('.nav-btn');
 
 // --- SUPABASE INITIALISATIE & REALTIME SYNC ---
 async function init() {
-    // 1. Haal de laatste data op uit de database
+    // 1. Haal op uit DB
     const { data, error } = await supabaseClient.from('toernooi_data').select('state').eq('id', 1).single();
     
     if (data && data.state && Object.keys(data.state).length > 0) {
@@ -27,11 +27,11 @@ async function init() {
     } else {
         genereerSpeelschema();
         initStats();
-        await saveState(true); // Sla lege setup op in database
+        await saveState(true); 
     }
     render();
 
-    // 2. Luister naar veranderingen van ANDERE schermen (de Live Sync!)
+    // 2. Realtime Sync (Luistert naar andere iPads)
     supabaseClient
       .channel('schema-db-changes')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'toernooi_data' }, (payload) => {
@@ -44,9 +44,7 @@ async function init() {
 
 async function saveState(forceRender = false) {
     berekenKlassement();
-    if (forceRender) render(); // UI meteen updaten voor de persoon die klikt
-    
-    // Stuur naar Supabase (andere schermen vangen dit op via de channel)
+    if (forceRender) render(); 
     await supabaseClient.from('toernooi_data').update({ state: state }).eq('id', 1);
 }
 
@@ -56,15 +54,24 @@ navButtons.forEach(btn => {
         navButtons.forEach(b => b.classList.remove('active'));
         e.target.classList.add('active');
         currentView = e.target.getAttribute('data-view');
+        
+        // Verberg navigatie op tablets om schermruimte te besparen
+        if(currentView !== 'dashboard') {
+            document.getElementById('top-nav').style.display = 'none';
+        } else {
+            document.getElementById('top-nav').style.display = 'flex';
+        }
         render();
     });
 });
 
 document.getElementById('reset-btn').addEventListener('click', async () => {
-    if(confirm("ALLES wissen en toernooi opnieuw starten?")) {
+    let code = prompt("Voer code in om DB te wissen (1403):");
+    if(code === "1403") {
         genereerSpeelschema();
         initStats();
         await saveState(true);
+        alert("Systeem Gereset!");
     }
 });
 
@@ -72,7 +79,6 @@ document.getElementById('reset-btn').addEventListener('click', async () => {
 function genereerSpeelschema() {
     state.matches = [];
     let matchId = 1;
-    // Iedereen tegen iedereen
     for (let i = 0; i < alleSpelers.length; i++) {
         for (let j = i + 1; j < alleSpelers.length; j++) {
             state.matches.push({
@@ -91,7 +97,7 @@ function genereerSpeelschema() {
 function initStats() {
     alleSpelers.forEach(s => {
         if(!state.stats[s]) {
-            state.stats[s] = { totalDarts: 0, legsWon: 0, doubleAttempts: 0, doubleHits: 0, checkouts: [], max180: 0 };
+            state.stats[s] = { totalDarts: 0, totalScore: 0, legsPlayed: 0, checkouts: [], bullsWon: 0, max180: 0 };
         }
     });
 }
@@ -119,62 +125,115 @@ function render() {
     else renderTablet(currentView); 
 }
 
-// --- DASHBOARD (LAPTOP WEERGAVE) ---
+// --- DASHBOARD (LAPTOP/TV WEERGAVE) ---
 function renderDashboard() {
     const activeB1 = state.matches.find(m => m.board === 'board1' && (m.status === 'playing' || m.status === 'bullen'));
     const activeB2 = state.matches.find(m => m.board === 'board2' && (m.status === 'playing' || m.status === 'bullen'));
 
+    // Bereken uitgebreide stats
+    let gemiddeldes = alleSpelers.map(s => {
+        const st = state.stats[s];
+        const avg = st.totalDarts > 0 ? ((st.totalScore / st.totalDarts) * 3).toFixed(1) : "0.0";
+        return { naam: s, avg: parseFloat(avg) };
+    }).sort((a,b) => b.avg - a.avg);
+
+    let bulls = alleSpelers.map(s => ({naam: s, bulls: state.stats[s].bullsWon})).sort((a,b) => b.bulls - a.bulls);
+    
+    let dartsPerLeg = alleSpelers.map(s => {
+        const st = state.stats[s];
+        const dpl = st.legsPlayed > 0 ? (st.totalDarts / st.legsPlayed).toFixed(1) : "0.0";
+        return { naam: s, dpl: parseFloat(dpl), total: st.totalDarts };
+    }).sort((a,b) => a.dpl - b.dpl); // Laagste is best!
+
     let html = `
-        <h2 style="font-size: 2.5em; margin-top: 0;">📡 LIVE DASHBOARD</h2>
         <div class="dashboard-grid">
-            <div class="grid-left">
-                <div class="live-matches">
-                    ${generateLiveBoardHTML('BORD 1', activeB1)}
-                    ${generateLiveBoardHTML('BORD 2', activeB2)}
+            
+            <!-- KOLOM 1: Live Borden & Wedstrijden -->
+            <div class="grid-col">
+                ${generateLiveBoardHTML('BORD 1', activeB1)}
+                ${generateLiveBoardHTML('BORD 2', activeB2)}
+                
+                <div class="card" style="flex: 1;">
+                    <h2>📋 WEDSTRIJDEN</h2>
+                    <div class="match-list-container">
+                        ${state.matches.map(m => {
+                            let label = ""; let cls = "";
+                            if(m.status === 'playing') { label = `BORD ${m.board==='board1'?'1':'2'} (Bezig)`; cls = "bezig"; }
+                            else if(m.status === 'bullen') { label = `BORD ${m.board==='board1'?'1':'2'} (Bullen)`; cls = "bullen"; }
+                            else if(m.status === 'finished') { label = `Klaar (${m.legs1}-${m.legs2})`; cls = "klaar"; }
+                            else { label = "Wacht"; }
+                            return `<div class="match-item ${cls}"><span>${m.p1} vs ${m.p2}</span><span>${label}</span></div>`;
+                        }).join('')}
+                    </div>
                 </div>
-                <div class="card">
+            </div>
+
+            <!-- KOLOM 2: Algemeen Klassement -->
+            <div class="grid-col">
+                <div class="card" style="height: 100%;">
                     <h2>🏆 ALGEMENE STAND</h2>
-                    <table class="retro-table">
-                        <tr><th>Pos</th><th>Speler</th><th>W</th><th>V</th><th>PT</th><th>Legs (V-T)</th><th>Saldo</th></tr>
+                    <table class="retro-table" style="height: 90%;">
+                        <tr><th>Pos</th><th>Speler</th><th>W</th><th>V</th><th>PT</th><th>Saldo</th></tr>
                         ${state.standings.map((s, i) => `
                             <tr style="${i===0 ? 'background:#ffffe6; font-weight:bold; font-size:1.1em;' : ''}">
                                 <td>${i+1}</td><td style="text-align:left;">${s.naam}</td>
                                 <td>${s.w}</td><td>${s.v}</td><td class="punten-cel">${s.pt}</td>
-                                <td>${s.legsV} - ${s.legsT}</td><td>${s.saldo > 0 ? '+'+s.saldo : s.saldo}</td>
+                                <td>${s.saldo > 0 ? '+'+s.saldo : s.saldo}</td>
                             </tr>
                         `).join('')}
                     </table>
                 </div>
             </div>
-            <div class="grid-right">
-                <div class="card">
+
+            <!-- KOLOM 3: Statistieken -->
+            <div class="grid-col">
+                <div class="card" style="height: 100%; justify-content: space-around;">
                     <h2>📈 STATISTIEKEN</h2>
-                    <h3 style="margin-top: 10px;">🎯 Check-out %</h3>
-                    <table class="retro-table">
-                        <tr><th>Speler</th><th>%</th><th>(Hits/Pogingen)</th></tr>
-                        ${alleSpelers.map(s => {
-                            const st = state.stats[s];
-                            const perc = st.doubleAttempts > 0 ? Math.round((st.doubleHits / st.doubleAttempts) * 100) : 0;
-                            return {naam: s, perc: perc, h: st.doubleHits, a: st.doubleAttempts};
-                        }).sort((a,b) => b.perc - a.perc).slice(0,5).map(s => `
-                            <tr><td>${s.naam}</td><td><strong>${s.perc}%</strong></td><td>${s.h}/${s.a}</td></tr>
-                        `).join('')}
-                    </table>
-                    <h3 style="margin-top: 15px;">🔥 Hoogste Uitgooi</h3>
-                    <table class="retro-table">
-                        <tr><th>Speler</th><th>Score</th></tr>
-                        ${getTopCheckouts().slice(0,5).map(co => `<tr><td>${co.naam}</td><td><strong>${co.score}</strong></td></tr>`).join('')}
-                    </table>
+                    
+                    <div>
+                        <h3>🎯 Gemiddelde Score</h3>
+                        <table class="retro-table">
+                            <tr style="background:#cfc;"><td>Hoogste: ${gemiddeldes[0].naam}</td><td><strong>${gemiddeldes[0].avg}</strong></td></tr>
+                            <tr style="background:#fcc;"><td>Laagste: ${gemiddeldes[gemiddeldes.length-1].naam}</td><td><strong>${gemiddeldes[gemiddeldes.length-1].avg}</strong></td></tr>
+                            ${gemiddeldes.slice(1,4).map(g => `<tr><td>${g.naam}</td><td>${g.avg}</td></tr>`).join('')}
+                        </table>
+                    </div>
+
+                    <div>
+                        <h3>🔥 Hoogste Finishes</h3>
+                        <table class="retro-table">
+                            <tr><th>Speler</th><th>Uitgooi</th></tr>
+                            ${getTopCheckouts().slice(0,3).map(co => `<tr><td>${co.naam}</td><td><strong>${co.score}</strong></td></tr>`).join('')}
+                        </table>
+                    </div>
+
+                    <div>
+                        <h3>⏱️ Pijlen Per Leg (Totaal)</h3>
+                        <table class="retro-table">
+                            <tr><th>Speler</th><th>Gem. Pijlen</th><th>Totaal</th></tr>
+                            ${dartsPerLeg.slice(0,3).map(d => `<tr><td>${d.naam}</td><td><strong>${d.dpl}</strong></td><td>${d.total}</td></tr>`).join('')}
+                        </table>
+                    </div>
+
+                    <div>
+                        <h3>🐂 Meeste Bulls Gewonnen</h3>
+                        <table class="retro-table">
+                            <tr><th>Speler</th><th>Aantal Bulls</th></tr>
+                            ${bulls.slice(0,3).map(b => `<tr><td>${b.naam}</td><td><strong>${b.bulls}</strong></td></tr>`).join('')}
+                        </table>
+                    </div>
+
                 </div>
             </div>
+
         </div>
     `;
     appContainer.innerHTML = html;
 }
 
 function generateLiveBoardHTML(title, match) {
-    if (!match) return `<div class="live-board"><h3 style="color:#999;">${title}</h3><p style="font-size: 2em; color:#ccc;">Geen match bezig</p></div>`;
-    if (match.status === 'bullen') return `<div class="live-board"><h3>${title}</h3><div class="live-score">🐂 BULLEN 🐂</div><p>${match.p1} vs ${match.p2}</p></div>`;
+    if (!match) return `<div class="live-board"><h3>${title}</h3><p style="font-size: 2em; color:#ccc; margin:0;">Vrij</p></div>`;
+    if (match.status === 'bullen') return `<div class="live-board"><h3>${title}</h3><div class="live-score" style="font-size: 2.5em;">🐂 BULLEN 🐂</div><p style="margin:0;">${match.p1} vs ${match.p2}</p></div>`;
     return `
         <div class="live-board">
             <h3>${title} <span class="live-legs">Best of 5</span></h3>
@@ -203,7 +262,7 @@ function renderTablet(boardId) {
     if (!actieveMatch) {
         let html = `<div class="tablet-view"><h2 class="board-header">Kies een match voor ${boardId === 'board1' ? 'BORD 1' : 'BORD 2'}</h2><div class="match-selector">`;
         const waitingMatches = state.matches.filter(m => m.status === 'waiting');
-        if(waitingMatches.length === 0) { html += `<h2>Geen wedstrijden meer!</h2></div></div>`; appContainer.innerHTML = html; return; }
+        if(waitingMatches.length === 0) { html += `<h2>Geen wedstrijden meer! Toernooi is klaar.</h2></div></div>`; appContainer.innerHTML = html; return; }
 
         waitingMatches.forEach(m => {
             html += `<div class="match-option" onclick="startMatch('${m.id}', '${boardId}')">${m.p1} 🆚 ${m.p2}</div>`;
@@ -215,11 +274,11 @@ function renderTablet(boardId) {
 
     if (actieveMatch.status === 'bullen') {
         showModal(`
-            <h2>🐂 WIE MAG BEGINNEN? 🐂</h2>
-            <p style="font-size: 1.5em;">Wie zat het dichtst bij de Bull?</p>
+            <h2 style="font-size:3em;">🐂 WIE MAG BEGINNEN? 🐂</h2>
+            <p style="font-size: 2em;">Wie zat het dichtst bij de Bull?</p>
             <div style="display:flex; justify-content:center; gap:20px; margin-top:20px;">
-                <button class="retro-button" onclick="setStarter('${actieveMatch.id}', 1)">${actieveMatch.p1}</button>
-                <button class="retro-button" onclick="setStarter('${actieveMatch.id}', 2)">${actieveMatch.p2}</button>
+                <button class="retro-button" style="font-size:2em;" onclick="setStarter('${actieveMatch.id}', 1)">${actieveMatch.p1}</button>
+                <button class="retro-button" style="font-size:2em;" onclick="setStarter('${actieveMatch.id}', 2)">${actieveMatch.p2}</button>
             </div>
         `);
         return;
@@ -231,7 +290,7 @@ function renderTablet(boardId) {
             <div class="tablet-view">
                 <div style="display:flex; justify-content: space-between; align-items:center;">
                     <h2 class="board-header">BORD ${boardId === 'board1' ? '1' : '2'} - FIRST TO 3</h2>
-                    <button class="retro-button danger" style="padding: 5px 10px; font-size:1em;" onclick="abortMatch('${actieveMatch.id}')">Afbreken</button>
+                    <button class="retro-button danger" style="padding: 10px 20px; font-size:1.5em;" onclick="abortMatch('${actieveMatch.id}')">Match Afbreken</button>
                 </div>
                 
                 <div class="scoring-area">
@@ -239,20 +298,18 @@ function renderTablet(boardId) {
                         <h3 class="p-name">${actieveMatch.p1}</h3>
                         <div class="p-legs">LEGS: ${actieveMatch.legs1}</div>
                         <div class="p-score">${actieveMatch.score1}</div>
-                        <div class="p-stats">Pijlen gegooid: ${actieveMatch.dartsThrown1}</div>
                     </div>
                     
                     <div class="player-pane ${actieveMatch.turn === 2 ? 'active-turn' : ''}">
                         <h3 class="p-name">${actieveMatch.p2}</h3>
                         <div class="p-legs">LEGS: ${actieveMatch.legs2}</div>
                         <div class="p-score">${actieveMatch.score2}</div>
-                        <div class="p-stats">Pijlen gegooid: ${actieveMatch.dartsThrown2}</div>
                     </div>
 
                     <div class="input-section">
-                        <label style="font-size: 2em; font-family:'Alfa Slab One', serif; color:white;">GEGOOID:</label>
+                        <label style="font-size: 3em; font-family:'Alfa Slab One', serif; color:white;">SCORE:</label>
                         <input type="number" id="score-input" class="score-input-field" placeholder="0" min="0" max="180">
-                        <button class="retro-button success" style="font-size: 2em;" onclick="submitScore('${actieveMatch.id}')">OK</button>
+                        <button class="retro-button success" style="font-size: 3em; padding: 10px 40px;" onclick="submitScore('${actieveMatch.id}')">OK</button>
                     </div>
                 </div>
             </div>
@@ -282,6 +339,11 @@ window.abortMatch = async function(matchId) {
 
 window.setStarter = async function(matchId, playerNum) {
     const m = state.matches.find(x => x.id === matchId);
+    const winnerName = playerNum === 1 ? m.p1 : m.p2;
+    
+    // Voeg bull stats toe (1x per match bepalen)
+    if (!m.startThrower) { state.stats[winnerName].bullsWon++; }
+
     m.status = 'playing'; m.startThrower = playerNum; m.turn = playerNum;
     await saveState(true);
 }
@@ -296,54 +358,60 @@ window.submitScore = async function(matchId) {
 
     const m = state.matches.find(x => x.id === matchId);
     const activeScoreStr = m.turn === 1 ? 'score1' : 'score2';
-    const activeDartsStr = m.turn === 1 ? 'dartsThrown1' : 'dartsThrown2';
     const activePlayerName = m.turn === 1 ? m.p1 : m.p2;
 
     const oldScore = m[activeScoreStr];
     let newScore = oldScore - throwScore;
-    m[activeDartsStr] += 3;
 
-    // Bust
+    // BUST
     if (newScore < 0 || newScore === 1) {
+        state.stats[activePlayerName].totalDarts += 3;
+        // Total score stays same on bust
         wisselBeurt(m);
-        render(); // Snel lokaal flitsen
+        render(); 
         await saveState(false);
         setTimeout(() => alert("💥 BUST! No score."), 100);
         return;
     }
 
-    // Win
+    // WIN LEG
     if (newScore === 0) {
-        m[activeScoreStr] = 0;
         if(throwScore === 180) state.stats[activePlayerName].max180++;
-        render(); 
-        
         showModal(`
             <h2 style="color:var(--green-ok); font-size:3em; margin:0;">🎯 UITGEGOOID!</h2>
-            <p style="font-size: 1.5em;">Hoeveel pijlen heb je <b>OP DE DUBBEL</b> gegooid voor deze check-out?</p>
-            <input type="number" id="double-darts-input" min="1" max="3" value="1" style="font-size: 3em; width: 100px; text-align:center; border: 3px solid black; border-radius:5px;"><br><br>
-            <button class="retro-button success" style="font-size: 1.5em;" onclick="processLegWin('${m.id}', ${throwScore})">Opslaan & Volgende Leg</button>
+            <p style="font-size: 1.5em;">Hoeveel pijlen heb je in deze <b>LAATSTE BEURT</b> gegooid?</p>
+            <div style="display:flex; justify-content:center; gap:20px; margin-top:20px;">
+                <button class="retro-button" style="font-size:2em;" onclick="processLegWin('${m.id}', ${throwScore}, 1)">1 Pijl</button>
+                <button class="retro-button" style="font-size:2em;" onclick="processLegWin('${m.id}', ${throwScore}, 2)">2 Pijlen</button>
+                <button class="retro-button" style="font-size:2em;" onclick="processLegWin('${m.id}', ${throwScore}, 3)">3 Pijlen</button>
+            </div>
         `);
         return;
     }
 
     // Normale worp
     m[activeScoreStr] = newScore;
+    state.stats[activePlayerName].totalDarts += 3;
+    state.stats[activePlayerName].totalScore += throwScore;
+
     if(throwScore === 180) state.stats[activePlayerName].max180++;
     wisselBeurt(m);
     await saveState(true);
 }
 
-window.processLegWin = async function(matchId, checkoutScore) {
+window.processLegWin = async function(matchId, checkoutScore, dartsThrown) {
     const m = state.matches.find(x => x.id === matchId);
-    const doubleDarts = parseInt(document.getElementById('double-darts-input').value) || 1;
     const winnerNum = m.turn;
     const winnerName = winnerNum === 1 ? m.p1 : m.p2;
 
-    state.stats[winnerName].legsWon++;
+    // Update Stats voor de winnaar
     state.stats[winnerName].checkouts.push(checkoutScore);
-    state.stats[winnerName].doubleHits++;
-    state.stats[winnerName].doubleAttempts += doubleDarts;
+    state.stats[winnerName].totalDarts += dartsThrown;
+    state.stats[winnerName].totalScore += checkoutScore;
+    
+    // Beide spelers hebben een leg voltooid
+    state.stats[m.p1].legsPlayed++;
+    state.stats[m.p2].legsPlayed++;
 
     if(winnerNum === 1) m.legs1++; else m.legs2++;
 
@@ -351,12 +419,16 @@ window.processLegWin = async function(matchId, checkoutScore) {
         m.status = 'finished';
         hideModal();
         alert(`🏆 MATCH WINNAAR: ${winnerName}!`);
+        
+        // Laat navigatie weer zien
+        document.getElementById('top-nav').style.display = 'flex';
         currentView = 'dashboard'; 
         await saveState(true);
         return;
     }
 
-    m.score1 = 501; m.score2 = 501; m.dartsThrown1 = 0; m.dartsThrown2 = 0;
+    // Reset voor nieuwe leg
+    m.score1 = 501; m.score2 = 501;
     m.startThrower = m.startThrower === 1 ? 2 : 1;
     m.turn = m.startThrower;
 

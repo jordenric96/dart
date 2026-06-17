@@ -3,13 +3,12 @@ const supabaseUrl = 'https://jpvgcgjnhvutqtrkbamc.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwdmdjZ2puaHZ1dHF0cmtiYW1jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3MTIxMzgsImV4cCI6MjA5NzI4ODEzOH0.edR9Ve6FOOre5DcmHDoAPSF0rIsU_DVX1KFy9pQACyI';
 const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-
 const alleSpelers = ["Jorden", "Yarni", "Joël", "Vince", "Stefaan", "Wim", "Tibe"];
 
 let state = { matches: [], standings: [], stats: {}, records: null, lastOverlay: null };
 let currentView = 'dashboard';
 let padInputString = ""; 
-let windowLastOverlayTime = 0; // Fix voor de klok-desynchronisatie
+let windowLastOverlayTime = 0;
 let logboekIndex = 0;
 
 const appContainer = document.getElementById('app-container');
@@ -19,7 +18,6 @@ const navButtons = document.querySelectorAll('.nav-btn');
 if (!document.getElementById('finish-overlay')) {
     let ov = document.createElement('div');
     ov.id = 'finish-overlay';
-    // Let op: PDC is hier zoals gevraagd overal weggehaald!
     ov.innerHTML = `<div class="finish-title" id="fo-title">CHECKOUT</div><div class="finish-name" id="fo-name"></div><div class="finish-score" id="fo-score"></div>`;
     document.body.appendChild(ov);
 }
@@ -32,7 +30,6 @@ async function init() {
         if (data && data.state && Object.keys(data.state).length > 0) {
             state = data.state;
             
-            // Zorg dat we niet bij een F5-refresh plotseling oude overlays tonen
             if (state.lastOverlay) {
                 windowLastOverlayTime = state.lastOverlay.time;
             }
@@ -97,7 +94,6 @@ async function saveState(forceRender = false) {
     await supabaseClient.from('toernooi_data').upsert({ id: 1, state: state });
 }
 
-// BUGFIX: De overlay-trigger negeert nu klokverschillen en triggert ALTIJD perfect
 function checkOverlayTrigger() {
     if (state.lastOverlay && state.lastOverlay.time !== windowLastOverlayTime) {
         triggerOverlay(state.lastOverlay.title, state.lastOverlay.name, state.lastOverlay.subtitle);
@@ -525,7 +521,8 @@ window.verwerkIngevuldeScore = async function(mId) {
     const oldScore = m.turn === 1 ? m.score1 : m.score2;
     let newScore = oldScore - score;
 
-    if (oldScore <= 170) {
+    // FIX: Enkel Double Tracking tonen als de overgebleven score 50 of lager is (inclusief bust).
+    if (oldScore <= 170 && newScore <= 50) {
         let isHit = (newScore === 0);
         showModal(`
             <h2>❌ DUBBEL TRACKING (${oldScore} over)</h2>
@@ -560,7 +557,6 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
     let calcScore = m[scStr] - score;
     let dartsThrown = isCheckout ? specDarts : 3;
 
-    // Queue voor de overlays, de laatste (belangrijkste) overschrijft
     let overlayQueue = [];
 
     // Track persoonlijke hoogste score
@@ -583,6 +579,12 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
     if (calcScore < 0 || calcScore === 1) {
         state.stats[aP].totalDarts += 3;
         m[dtLegStr] += 3; m['matchDarts' + m.turn] += 3;
+        
+        if (overlayQueue.length > 0) {
+            let best = overlayQueue[overlayQueue.length - 1];
+            state.lastOverlay = { ...best, time: Date.now() };
+        }
+
         m.turn = m.turn === 1 ? 2 : 1;
         await saveState(true);
         return;

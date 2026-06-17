@@ -4,6 +4,8 @@
     --border-color: #111;
     --accent-color: #fff;
     --highlight-color: #ffe600;
+    --red-alert: #ff4d4d;
+    --green-ok: #4CAF50;
 }
 
 body {
@@ -11,12 +13,11 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     margin: 0;
-    padding: 1vh 1vw; 
+    padding: 0;
     background-image: radial-gradient(#d4d4d4 2px, transparent 2px);
     background-size: 20px 20px;
     display: flex;
     flex-direction: column;
-    align-items: center; 
     height: 100vh;
     overflow: hidden; 
     box-sizing: border-box;
@@ -24,193 +25,66 @@ body {
 
 h1, h2, h3, h4 { font-family: 'Alfa Slab One', serif; text-transform: uppercase; margin: 0.5vh 0; letter-spacing: 1px; text-align: center; }
 
-/* Kaders */
-.retro-header, .info-item, .card {
-    background-color: var(--accent-color);
-    border: 4px solid var(--border-color);
-    border-radius: 8px;
-    padding: 1vh 1vw;
-    margin-bottom: 1vh;
-    box-shadow: 4px 4px 0px 0px var(--border-color);
-    width: 100%; 
-    box-sizing: border-box;
-    text-align: center;
+/* --- NAVIGATIE BOVENAAN --- */
+.top-nav {
+    background-color: var(--border-color);
+    color: var(--accent-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    box-shadow: 0 4px 0px 0px rgba(0,0,0,0.5);
+    z-index: 10;
 }
+.nav-title { font-family: 'Alfa Slab One', serif; font-size: 1.5em; color: var(--highlight-color); }
+.nav-btn {
+    background: transparent; color: white; border: 2px solid white; border-radius: 5px;
+    padding: 5px 15px; font-family: 'Alfa Slab One', serif; cursor: pointer; margin-left: 10px;
+    transition: 0.2s;
+}
+.nav-btn.active, .nav-btn:hover { background: var(--highlight-color); color: var(--border-color); border-color: var(--highlight-color); }
 
-.retro-header { max-width: 600px; padding: 2vh 2vw; }
-.retro-header .title-small { font-size: clamp(1rem, 3vh, 1.5rem); }
-.retro-header .title-large { font-size: clamp(1.5rem, 6vw, 2.5rem); margin: 0.5vh 0; line-height: 1; }
-.retro-header h3 { font-size: clamp(0.8rem, 2vh, 1.2rem); }
+#app-container { flex: 1; padding: 2vh 2vw; overflow-y: auto; }
 
-.info-board { width: 100%; display: flex; flex-direction: column; align-items: center; flex: 1; justify-content: center; }
-.info-row { display: flex; gap: 1vw; justify-content: center; width: 100%; max-width: 800px; }
-.info-item { font-size: clamp(0.9rem, 2vh, 1.2rem); flex: 1; }
-.regels-card { max-width: 800px; margin-top: 1vh; }
-.regels-card ul { text-align: left; font-size: clamp(0.8rem, 1.8vh, 1.1rem); padding: 0 1vw; margin: 0; }
-
-#app-container { width: 100%; max-width: 1800px; height: 100%; display: flex; flex-direction: column; justify-content: center; }
-
-.dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1vw; width: 100%; height: 96vh; }
-.grid-col { display: flex; flex-direction: column; height: 100%; }
-.grid-col .card { flex: 1; display: flex; flex-direction: column; margin-bottom: 0; overflow: hidden; }
-
-.retro-button { font-family: 'Alfa Slab One', serif; background-color: var(--highlight-color); color: var(--border-color); border: 3px solid var(--border-color); padding: 0.5vh 1vw; font-size: clamp(0.8rem, 2vh, 1.2rem); border-radius: 6px; cursor: pointer; box-shadow: 3px 3px 0px 0px var(--border-color); }
+/* --- ALGEMENE KADERS --- */
+.card {
+    background-color: var(--accent-color); border: 4px solid var(--border-color); border-radius: 8px;
+    padding: 1vh 1vw; margin-bottom: 1vh; box-shadow: 4px 4px 0px 0px var(--border-color); text-align: center;
+}
+.retro-button { font-family: 'Alfa Slab One', serif; background-color: var(--highlight-color); color: var(--border-color); border: 3px solid var(--border-color); padding: 10px 20px; font-size: 1.2rem; border-radius: 6px; cursor: pointer; box-shadow: 3px 3px 0px 0px var(--border-color); }
 .retro-button:active { box-shadow: 0px 0px 0px 0px var(--border-color); transform: translate(3px, 3px); }
-.retro-button.danger { background-color: #ff4d4d; color: white; font-size: 0.8rem; padding: 0.5vh 1vw;}
-.icon-btn { background: #fff; border: 2px solid var(--border-color); border-radius: 4px; font-size: 1rem; cursor: pointer; padding: 0 0.5vw; margin-left: 0.5vw; }
+.danger { background-color: var(--red-alert); color: white; }
+.success { background-color: var(--green-ok); color: white; }
 
-.player-checkboxes { display: flex; flex-wrap: wrap; justify-content: center; gap: 1vw; font-size: clamp(1rem, 2.5vh, 1.5rem); margin: 2vh 0; }
-.player-checkboxes label { background: #eee; padding: 0.5vh 1vw; border: 2px solid var(--border-color); border-radius: 4px; cursor: pointer; }
+.retro-table { width: 100%; border-collapse: collapse; margin-bottom: 0.5vh; font-size: clamp(0.8rem, 2vh, 1.2rem); }
+.retro-table th, .retro-table td { border: 2px solid var(--border-color); padding: 5px; text-align: center; }
+.retro-table th { background-color: var(--border-color); color: var(--accent-color); font-family: 'Alfa Slab One', serif; }
 
-.retro-table { width: 100%; border-collapse: collapse; margin-bottom: 0.5vh; font-size: clamp(0.7rem, 1.8vh, 1rem); }
-.retro-table th, .retro-table td { border: 2px solid var(--border-color); padding: 0.2vh 0.2vw; text-align: center; }
-.retro-table th { background-color: var(--border-color); color: var(--accent-color); font-family: 'Alfa Slab One', serif; font-size: 0.8em; }
-.punten-cel { font-weight: bold; font-size: 1.1em; background-color: #eee; }
+/* --- DASHBOARD GRID (LAPTOP) --- */
+.dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 2vw; height: 100%; }
+.live-matches { display: flex; gap: 2vw; margin-bottom: 2vh; }
+.live-board { flex: 1; border: 4px solid var(--highlight-color); background: #fff; border-radius: 10px; padding: 10px; box-shadow: 5px 5px 0px 0px var(--border-color); text-align: center; }
+.live-score { font-family: 'Alfa Slab One', serif; font-size: 3em; display: flex; justify-content: space-around; align-items: center; margin: 10px 0; }
+.live-legs { font-size: 0.4em; color: #555; background: #eee; padding: 5px 10px; border-radius: 5px; }
 
-.match-container { border-bottom: 1px dashed #ccc; padding: 0.5vh 0; flex: 1; display: flex; flex-direction: column; justify-content: center; }
-.match-container:last-child { border-bottom: none; }
-.match-row { display: flex; justify-content: center; align-items: center; gap: 0.5vw; margin-bottom: 0.2vh; }
-.match-player { flex: 1; overflow: hidden; text-overflow: ellipsis; font-weight: bold; font-size: clamp(0.8rem, 2vh, 1.2rem); }
-.match-player.speler1 { text-align: right; }
-.match-player.speler2 { text-align: left; }
-.match-inputs { display: flex; align-items: center; gap: 0.2vw; flex-shrink: 0; }
+/* --- 501 TABLET SCHERM (BORD 1 & 2) --- */
+.tablet-view { display: flex; flex-direction: column; height: 100%; max-width: 1000px; margin: 0 auto; }
+.board-header { font-size: 2em; margin-bottom: 10px; }
+.match-selector { display: flex; flex-direction: column; gap: 10px; }
+.match-option { background: #fff; border: 3px solid var(--border-color); padding: 15px; font-size: 1.5em; cursor: pointer; border-radius: 8px; font-family: 'Alfa Slab One', serif; transition: 0.2s; }
+.match-option:hover { background: var(--highlight-color); }
 
-.score-input { width: clamp(20px, 3vh, 35px); height: clamp(20px, 3vh, 35px); font-family: 'Alfa Slab One', serif; font-size: clamp(0.8rem, 2vh, 1.2rem); text-align: center; border: 2px solid var(--border-color); border-radius: 4px; }
-.locked-score { font-family: 'Alfa Slab One', serif; font-size: clamp(1rem, 2.5vh, 1.4rem); padding: 0 0.5vw; }
-.match-extras { display: flex; justify-content: space-between; background-color: #f5f5f5; border: 1px solid #ccc; border-radius: 3px; padding: 0.2vh 0.5vw; font-size: clamp(0.6rem, 1.5vh, 0.9rem); }
-.extra-input { font-family: 'Patrick Hand', cursive; text-align: center; border: 1px solid #999; border-radius: 2px; padding: 0; font-size: 1em; }
-.co-input { width: clamp(30px, 4vw, 50px); }
-.max-input { width: clamp(15px, 2vw, 25px); }
+.scoring-area { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex: 1; }
+.player-pane { border: 5px solid var(--border-color); border-radius: 15px; background: #fff; display: flex; flex-direction: column; align-items: center; padding: 20px; position: relative; }
+.player-pane.active-turn { border-color: var(--highlight-color); box-shadow: 0 0 20px rgba(255,230,0,0.8); background: #ffffe6; }
+.p-name { font-size: 2.5em; font-family: 'Alfa Slab One', serif; margin: 0; }
+.p-legs { font-size: 1.5em; background: #333; color: #fff; padding: 5px 20px; border-radius: 5px; margin: 10px 0; font-family: 'Alfa Slab One', serif; }
+.p-score { font-size: 8em; font-family: 'Alfa Slab One', serif; margin: 20px 0; line-height: 1; }
+.p-stats { font-size: 1.2em; color: #666; margin-top: auto; }
 
-/* --- FULL SCREEN LOTING EN CINEMATIC --- */
-.loting-mega-box {
-    background-color: #111;
-    color: var(--highlight-color);
-    border: 6px solid var(--highlight-color);
-    border-radius: 15px;
-    padding: 3vh 2vw;
-    margin: 1vh auto;
-    width: 95%;
-    max-width: 1400px;
-    min-height: 45vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    box-shadow: 10px 10px 0px 0px var(--border-color);
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-}
-.loting-mega-box h1 { font-size: clamp(1.8rem, 5vw, 4.5rem); line-height: 1.2; margin: 0; text-shadow: 4px 4px 0px #000; }
-.loting-mega-box h3 { color: #fff; font-size: clamp(1rem, 3vw, 2rem); margin: 0; }
+.input-section { grid-column: 1 / -1; display: flex; justify-content: center; align-items: center; gap: 15px; background: var(--border-color); padding: 15px; border-radius: 10px; margin-top: 10px;}
+.score-input-field { font-size: 3em; font-family: 'Alfa Slab One', serif; width: 150px; text-align: center; border: 4px solid var(--highlight-color); border-radius: 10px; }
 
-/* FIX VOOR VERSPRINGEN: Vaste kaders met minimumgroottes */
-.fixed-name-container {
-    min-height: clamp(3rem, 6vw, 5rem); /* Garandeert hoogte voor langste naam */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 1vh 0;
-    width: 100%;
-}
-
-.fixed-poule-area {
-    min-height: clamp(100px, 20vw, 180px); /* Garandeert hoogte voor poulebox */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    margin-top: 1vh;
-}
-
-.loting-poule-box { 
-    background-color: var(--accent-color); 
-    color: #111; 
-    font-size: clamp(3rem, 8vw, 6rem); 
-    min-width: clamp(80px, 15vw, 150px); /* Garandeert breedte */
-    height: clamp(80px, 15vw, 150px); /* Garandeert hoogte */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-radius: 15px; 
-    margin: 0 auto; 
-    border: 5px solid var(--border-color); 
-    line-height: 1.1; 
-    transition: all 0.3s ease;
-}
-
-/* De Gouden Glorie (Pauze Animatie) */
-.highlight-win {
-    color: var(--highlight-color) !important;
-    text-shadow: 0 0 20px var(--highlight-color), 0 0 40px #ff0 !important;
-    transform: scale(1.1);
-    transition: all 0.3s ease;
-}
-.loting-poule-box.highlight-win {
-    background-color: var(--highlight-color) !important;
-    color: #111 !important;
-    box-shadow: 0 0 30px var(--highlight-color), 0 0 60px #ff0 !important;
-    border-color: #fff !important;
-    transform: scale(1.1);
-}
-
-.poule-list { width: 45%; border: 3px solid var(--border-color); background: #fff; border-radius: 6px; padding: 1vh; box-shadow: 3px 3px 0px 0px var(--border-color); }
-.poule-list ul { list-style: none; padding: 0; font-size: clamp(1.2rem, 3.5vh, 2rem); margin: 0; font-weight: bold;}
-.poule-list li { border-bottom: 1px dashed #ccc; padding: 0.5vh 0; }
-
-/* CINEMATIC EFFECTEN (Extra Intens) */
-.spotlight {
-    position: absolute; top: 0; width: 40vw; height: 150vh;
-    background: radial-gradient(circle at top, rgba(255, 255, 255, 0.8), rgba(255, 230, 0, 0.5) 20%, transparent 60%);
-    transform-origin: top center; pointer-events: none; mix-blend-mode: screen; z-index: 1;
-}
-.spotlight.left { left: 5%; animation: swingLeft 4s infinite ease-in-out; }
-.spotlight.right { right: 5%; animation: swingRight 4.5s infinite ease-in-out; }
-
-@keyframes swingLeft { 0%, 100% { transform: rotate(-35deg); } 50% { transform: rotate(35deg); } }
-@keyframes swingRight { 0%, 100% { transform: rotate(35deg); } 50% { transform: rotate(-35deg); } }
-
-/* NIEUWE ACHTERGRONDNAMEN LOGICA */
-.vague-names-container {
-    position: absolute; width: 100%; height: 100%; top: 0; left: 0;
-    pointer-events: none; z-index: 0;
-}
-.vague-name {
-    position: absolute;
-    font-family: 'Alfa Slab One', serif;
-    color: #fff;
-    opacity: 0;
-    font-size: clamp(2rem, 5vw, 4rem);
-    filter: blur(2px);
-    animation: calmFadeInOut 6s infinite;
-}
-
-@keyframes calmFadeInOut {
-    0%, 100% { opacity: 0; transform: translateY(10px); }
-    20%, 80% { opacity: 0.12; transform: translateY(0); }
-}
-
-.firework-flash {
-    position: absolute; width: 10px; height: 10px; border-radius: 50%;
-    pointer-events: none; opacity: 0; z-index: 2;
-}
-.fw-1 { top: 20%; left: 25%; animation: fwBurst 2.5s infinite 0.5s; }
-.fw-2 { top: 40%; right: 20%; animation: fwBurst 3.2s infinite 1.2s; }
-.fw-3 { top: 15%; right: 40%; animation: fwBurst 2.8s infinite 2.0s; }
-
-@keyframes fwBurst {
-    0% { opacity: 0; transform: scale(0); box-shadow: 0 0 20px #fff, 0 0 40px #ff0, 0 0 60px #f00; }
-    10% { opacity: 1; }
-    40% { opacity: 0.9; box-shadow: 0 0 60px #fff, 0 0 100px #ff0, 0 0 150px #f0f, 0 0 200px transparent; }
-    80%, 100% { opacity: 0; transform: scale(15); }
-}
-
-/* Modal */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); z-index: 9999; display: none; justify-content: center; align-items: center; }
-.retro-receipt { background-color: #fff; background-image: repeating-linear-gradient(transparent, transparent 29px, #ccc 29px, #ccc 30px); border: 6px solid var(--border-color); border-radius: 5px; padding: 30px; width: 90%; max-width: 500px; box-shadow: 10px 10px 0px 0px var(--highlight-color); text-align: left; }
-.receipt-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 1.1em; text-align: left; }
-.receipt-table th, .receipt-table td { padding: 8px 4px; border-bottom: 2px dashed #999; }
-.receipt-table th { font-family: 'Alfa Slab One', serif; font-size: 0.8em; border-bottom: 4px solid var(--border-color); }
-.total-row { font-weight: bold; background-color: #eee; font-size: 1.2em; text-align: right;}
+/* Modal (Pop-ups) */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex; justify-content: center; align-items: center; }
+.retro-receipt { background-color: #fff; border: 6px solid var(--border-color); border-radius: 10px; padding: 30px; width: 90%; max-width: 500px; box-shadow: 10px 10px 0px 0px var(--highlight-color); text-align: center; }

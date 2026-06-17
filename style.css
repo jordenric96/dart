@@ -30,54 +30,35 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 
 /* Navigatie */
 .top-nav {
-    background-color: #151518;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1vh 2vw;
-    border-bottom: 3px solid var(--gold);
-    box-sizing: border-box;
+    background-color: #151518; display: flex; justify-content: space-between; align-items: center;
+    padding: 1vh 2vw; border-bottom: 3px solid var(--gold); box-sizing: border-box;
 }
-.nav-title {
-    font-size: clamp(1.2rem, 3vh, 2rem);
-    color: var(--gold);
-    text-transform: uppercase;
-}
+.nav-title { font-size: clamp(1.2rem, 3vh, 2rem); color: var(--gold); text-transform: uppercase; }
 .nav-buttons { display: flex; gap: 1vw; }
 .nav-btn {
-    background: #2a2a35; color: var(--text-light); border: 1px solid #444;
-    padding: 0.8vh 1.5vw; font-size: clamp(0.9rem, 2vh, 1.3rem); cursor: pointer; border-radius: 4px; transition: all 0.2s ease;
+    background: #2a2a35; color: var(--text-light); border: 1px solid #444; padding: 0.8vh 1.5vw;
+    font-size: clamp(0.9rem, 2vh, 1.3rem); cursor: pointer; border-radius: 4px; transition: all 0.2s ease;
 }
 .nav-btn.active, .nav-btn:hover { background: var(--gold); color: #000; border-color: var(--gold); }
 
-#app-container {
-    flex: 1;
-    padding: 1.5vh 1.5vw;
-    box-sizing: border-box;
-    /* Rekening houden met Nav (6vh) en Ticker (4vh) */
-    height: calc(100vh - 10vh);
-}
+#app-container { flex: 1; padding: 1.5vh 1.5vw; box-sizing: border-box; height: calc(100vh - 10vh); }
 
 /* --- TV DASHBOARD PRESENTATIE LAY-OUT --- */
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 1.5vw;
-    height: 100%;
-}
+.dashboard-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5vw; height: 100%; }
 .grid-col { display: flex; flex-direction: column; gap: 1.5vh; height: 100%; overflow: hidden; }
 
 .card {
     background-color: var(--card-bg); border: 1px solid #2d3748; border-radius: 8px;
     padding: 1.5vh 1vw; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden;
 }
-.card.single { flex: 1; justify-content: center; }
+/* FIX: flex-start zorgt ervoor dat titels NOOIT meer naar boven geduwd worden */
+.card.single { flex: 1; justify-content: flex-start; }
 
 .card h2 {
-    font-size: clamp(1.1rem, 2.5vh, 1.5rem); color: var(--gold); margin: 0 0 1vh 0; text-transform: uppercase; border-bottom: 2px solid var(--border); padding-bottom: 0.5vh; text-align: left;
+    font-size: clamp(1rem, 2.2vh, 1.3rem); color: var(--gold); margin: 0 0 1vh 0; text-transform: uppercase; 
+    border-bottom: 2px solid var(--border); padding-bottom: 0.5vh; text-align: left; flex-shrink: 0;
 }
 
-/* Animatie voor de roterende carrousel */
 .fade-in { animation: fadeIn 0.5s ease-in; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -95,11 +76,17 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 
 /* Tabellen */
 .retro-table { width: 100%; border-collapse: collapse; font-size: clamp(0.85rem, 1.8vh, 1.15rem); table-layout: fixed; }
-.retro-table th, .retro-table td { padding: 0.8vh 0.4vw; text-align: center; white-space: nowrap; border-bottom: 1px solid #2d3748; }
+.retro-table th, .retro-table td { padding: 0.8vh 0.4vw; text-align: center; white-space: nowrap; border-bottom: 1px solid #2d3748; overflow: hidden; text-overflow: ellipsis;}
 .retro-table th { color: var(--border); font-size: 1.1em; }
 .retro-table tr:nth-child(even) { background-color: rgba(255,255,255,0.02); }
 .retro-table tr.leader-row { background-color: rgba(255, 183, 3, 0.05); font-weight: bold; color: #fff; }
 .punten-cel { color: var(--gold); font-weight: bold; font-size: 1.2em; }
+
+/* Knockout Blok */
+.knockout-row {
+    display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #333; padding: 1vh 0; font-size: clamp(0.9rem, 2vh, 1.1rem);
+}
+.knockout-title { font-size: 0.8em; color: var(--gold); width: 80px; font-weight: bold; text-transform: uppercase;}
 
 .match-list-container { flex: 1; overflow-y: auto; }
 .match-item { display: flex; justify-content: space-between; padding: 0.6vh 0.5vw; border-bottom: 1px dashed #333; font-size: 0.95rem; }
@@ -107,7 +94,7 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .match-item.bullen { color: var(--gold); font-weight: bold; }
 .match-item.klaar { color: #555; }
 
-/* --- TICKER TAPE (Nieuwsbalk onderaan) --- */
+/* --- TICKER TAPE --- */
 .ticker-wrap {
     width: 100%; height: 4vh; background-color: #000; border-top: 2px solid var(--border); box-sizing: border-box; display: flex; align-items: center; overflow: hidden;
 }

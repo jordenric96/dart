@@ -24,6 +24,23 @@ if (!document.getElementById('finish-overlay')) {
     document.body.appendChild(ov);
 }
 
+// --- TIJD FORMATTERING ---
+function formatTime(ms) {
+    if (!ms || ms < 0) return "00:00";
+    let totalSeconds = Math.floor(ms / 1000);
+    let m = Math.floor(totalSeconds / 60);
+    let s = totalSeconds % 60;
+    return `${m < 10 ? '0':''}${m}:${s < 10 ? '0':''}${s}`;
+}
+function formatTimeLong(ms) {
+    if (!ms || ms < 0) return "00:00:00";
+    let totalSeconds = Math.floor(ms / 1000);
+    let h = Math.floor(totalSeconds / 3600);
+    let m = Math.floor((totalSeconds % 3600) / 60);
+    let s = totalSeconds % 60;
+    return `${h > 0 ? (h + ':') : ''}${m < 10 ? '0':''}${m}:${s < 10 ? '0':''}${s}`;
+}
+
 // --- DATABASE & REALTIME ---
 async function init() {
     try {
@@ -32,8 +49,16 @@ async function init() {
         if (data && data.state && Object.keys(data.state).length > 0) {
             state = data.state;
             if (state.lastOverlay) windowLastOverlayTime = state.lastOverlay.time;
+            
+            // Initialiseer nieuwe record en stat lijsten als ze missen
             if (!state.records) state.records = { highestCheckout: 0, shortestLeg: 999, highestMatchAvg: 0, highestScore: 0 };
             if (state.records.highestScore === undefined) state.records.highestScore = 0;
+            if (state.records.fastestLegTime === undefined) state.records.fastestLegTime = 99999999;
+            if (state.records.fastestMatchTime === undefined) state.records.fastestMatchTime = 99999999;
+
+            if (!state.completedLegs) state.completedLegs = [];
+            if (!state.completedMatches) state.completedMatches = [];
+            if (!state.tournamentStartTime) state.tournamentStartTime = null;
 
             alleSpelers.forEach(s => {
                 if(!state.stats[s]) state.stats[s] = {};
@@ -54,6 +79,10 @@ async function init() {
                 if (m.matchScore1 === undefined) m.matchScore1 = 0;
                 if (m.matchDarts2 === undefined) m.matchDarts2 = 0;
                 if (m.matchScore2 === undefined) m.matchScore2 = 0;
+                if (m.status === 'playing') {
+                    if (!m.matchStartTime) m.matchStartTime = Date.now();
+                    if (!m.legStartTime) m.legStartTime = Date.now();
+                }
             });
 
             if (!state.matches.some(m => m.id === 'HF1')) {
@@ -72,15 +101,29 @@ async function init() {
             if(currentView === 'dashboard') {
                 dashboardTimerMs += 100;
                 
-                // Elke 10 sec het logboek updaten
+                // Update live timers in de UI
+                document.querySelectorAll('.live-timer-match').forEach(el => {
+                    let start = parseInt(el.getAttribute('data-start'));
+                    if(start) el.innerText = formatTime(Date.now() - start);
+                });
+                document.querySelectorAll('.live-timer-leg').forEach(el => {
+                    let start = parseInt(el.getAttribute('data-start'));
+                    if(start) el.innerText = formatTime(Date.now() - start);
+                });
+                document.querySelectorAll('.live-timer-tourney').forEach(el => {
+                    let start = parseInt(el.getAttribute('data-start'));
+                    if(start) el.innerText = formatTimeLong(Date.now() - start);
+                });
+
+                // Schema rouleren (10 sec)
                 if (dashboardTimerMs % 10000 === 0) {
                     logboekIndex = (logboekIndex + 1) % 3;
                     updateLogboekOnly();
                 }
                 
-                // Elke 15 sec de stat pagina updaten
+                // Stats rouleren (15 sec) -> 3 pagina's!
                 if (dashboardTimerMs % 15000 === 0) {
-                    statsPage = (statsPage + 1) % 2;
+                    statsPage = (statsPage + 1) % 3;
                     updateDashboardData();
                 }
 
@@ -115,7 +158,7 @@ function checkOverlayTrigger() {
     if (state.lastOverlay && state.lastOverlay.time !== windowLastOverlayTime) {
         let isRecord = state.lastOverlay.title.includes('RECORD');
         if (isRecord && currentView !== 'dashboard') {
-            // Tablets tonen enkel reguliere checkouts, geen records
+            // Tablets tonen enkel reguliere checkouts
         } else {
             triggerOverlay(state.lastOverlay.title, state.lastOverlay.name, state.lastOverlay.subtitle);
         }
@@ -164,7 +207,8 @@ function maakMatchObj(id, p1, p2, fase) {
         id: id, p1: p1, p2: p2, fase: fase, status: 'waiting', board: null,
         legs1: 0, legs2: 0, score1: 501, score2: 501, turn: null, startThrower: null,
         dartsLeg1: 0, dartsLeg2: 0, scoreLeg1: 0, scoreLeg2: 0,
-        matchDarts1: 0, matchScore1: 0, matchDarts2: 0, matchScore2: 0
+        matchDarts1: 0, matchScore1: 0, matchDarts2: 0, matchScore2: 0,
+        matchStartTime: null, legStartTime: null
     };
 }
 
@@ -186,7 +230,10 @@ function genereerRoundRobinSchema() {
 
 function initStatsKlassen() {
     state.stats = {};
-    state.records = { highestCheckout: 0, shortestLeg: 999, highestMatchAvg: 0, highestScore: 0 };
+    state.records = { highestCheckout: 0, shortestLeg: 999, highestMatchAvg: 0, highestScore: 0, fastestLegTime: 99999999, fastestMatchTime: 99999999 };
+    state.completedLegs = [];
+    state.completedMatches = [];
+    state.tournamentStartTime = null;
     alleSpelers.forEach(s => {
         state.stats[s] = { 
             totalDarts: 0, totalScore: 0, legsPlayed: 0, checkouts: [], 
@@ -271,7 +318,6 @@ function buildDashboardSkeleton() {
                 </div>
             </div>
             
-            <!-- 2x3 Grid voor grote leesbare stats -->
             <div class="grid-col" style="position:relative;">
                 <div class="stats-progress-container"><div class="stats-progress-fill" id="stats-timer-bar"></div></div>
                 <div class="stats-grid" id="tv-stats-grid">
@@ -318,8 +364,14 @@ function generateTVBoardHTML(title, match) {
     let mom1 = Math.min(100, (match.dartsLeg1 / 24) * 100); 
     let mom2 = Math.min(100, (match.dartsLeg2 / 24) * 100); 
 
+    // Timers in de h3 toegevoegd
+    let timerHTML = `<span style="font-size:0.8rem; color:var(--gold); font-family:monospace;">M: <span class="live-timer-match" data-start="${match.matchStartTime}">00:00</span> | L: <span class="live-timer-leg" data-start="${match.legStartTime}">00:00</span></span>`;
+
     return `
-        <h3>${title} <span style="font-size:0.5em; background:#444; padding:2px 8px; border-radius:4px; margin-left:10px;">${matchFase} | Leg ${match.legs1 + match.legs2 + 1}</span></h3>
+        <h3>
+            <span>${title} <span style="font-size:0.5em; background:#444; padding:2px 8px; border-radius:4px; margin-left:10px;">${matchFase} | Leg ${match.legs1 + match.legs2 + 1}</span></span>
+            ${timerHTML}
+        </h3>
         <div class="live-score-row">
             <div class="player-col ${active1}">
                 <div class="p-name">${match.p1}</div>
@@ -402,81 +454,110 @@ function updateDashboardData() {
     if(document.getElementById('tv-semi-finals')) document.getElementById('tv-semi-finals').innerHTML = koHtml('HF 1', hf1, 'silver') + koHtml('HF 2', hf2, 'silver');
     if(document.getElementById('tv-finals')) document.getElementById('tv-finals').innerHTML = koHtml('FINALE', fin, 'gold');
 
-    // Stats Berekeningen (Top 7)
+    // 3 Pagina's Stats (0, 1, 2)
     const top7 = (arr) => arr.sort((a,b) => b.val - a.val).slice(0,7); 
     const statBox = (t, d) => `<h3>${t}</h3><table class="retro-table">${d.map((x,i)=>`<tr><td style="width:15px;">${i+1}</td><td style="text-align:left;">${x.naam}</td><td style="font-weight:bold;text-align:right;">${x.txt !== undefined ? x.txt : x.val}</td></tr>`).join('')}</table>`;
 
-    let allCheckouts = [];
-    alleSpelers.forEach(s => {
-        if(state.stats[s] && state.stats[s].checkouts) state.stats[s].checkouts.forEach(c => allCheckouts.push({naam: s, val: c}));
-    });
-    let d_hgo = top7(allCheckouts);
-
-    let allScores = [];
-    alleSpelers.forEach(s => {
-        if(state.stats[s] && state.stats[s].highScores) state.stats[s].highScores.forEach(c => allScores.push({naam: s, val: c}));
-    });
-    let d_hsc = top7(allScores);
-
-    let d_tot = top7(alleSpelers.map(s => {
-        let legs = state.stats[s]?.legsPlayed || 0;
-        let darts = state.stats[s]?.totalDarts || 0;
-        let avgLeg = legs > 0 ? (darts / legs).toFixed(2) : "0.00";
-        return { naam: s, val: darts, txt: `${darts} <span style="font-weight:normal;color:#888;">(${avgLeg}/L)</span>` };
-    }));
-
-    let d_avg = top7(alleSpelers.map(s => {
-        let v = state.stats[s]?.totalDarts > 0 ? ((state.stats[s].totalScore / state.stats[s].totalDarts)*3) : 0;
-        return { naam: s, val: v, txt: v.toFixed(2) };
-    }));
-
-    let d_dbl = top7(alleSpelers.map(s => {
-        let v = state.stats[s]?.doubleAttempts > 0 ? ((state.stats[s].doubleHits / state.stats[s].doubleAttempts)*100) : 0;
-        return { naam: s, val: v, txt: `${v.toFixed(2)}%` };
-    }));
-
-    let d_hgf = top7(alleSpelers.map(s => ({ naam: s, val: (state.stats[s]?.checkouts && state.stats[s].checkouts.length > 0) ? Math.max(...state.stats[s].checkouts) : 0 })));
-    
-    let d_slg = alleSpelers.map(s => { 
-        let sl = state.stats[s]?.shortestLeg || { darts: 999, avg: 0 }; 
-        return { naam: s, val: sl.darts === 999 ? 0 : sl.darts, txt: sl.darts === 999 ? '0' : `${sl.darts} <span style="font-weight:normal;color:#888;">(${parseFloat(sl.avg).toFixed(2)})</span>` }; 
-    }).filter(x => x.val > 0).sort((a,b) => a.val - b.val).slice(0,7);
-    
-    let d_mva = top7(alleSpelers.map(s => {
-        let v = (state.stats[s]?.matchAvgs && state.stats[s].matchAvgs.length > 0) ? Math.max(...state.stats[s].matchAvgs) : 0;
-        return { naam: s, val: v, txt: v.toFixed(2) };
-    }));
-
-    let d_f9a = top7(alleSpelers.map(s => {
-        let v = state.stats[s]?.first9Darts > 0 ? ((state.stats[s].first9Score / state.stats[s].first9Darts)*3) : 0;
-        return { naam: s, val: v, txt: v.toFixed(2) };
-    }));
-
-    let d_ton = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.tonPlus || 0 })));
-    let d_brk = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.breaks || 0 })));
-    
-    let d_bul = top7(alleSpelers.map(s => {
-        let bWon = state.stats[s]?.bullsWon || 0;
-        let mStarted = state.matches.filter(m => (m.p1 === s || m.p2 === s) && ['playing', 'post_match', 'finished'].includes(m.status)).length;
-        let perc = mStarted > 0 ? ((bWon / mStarted) * 100).toFixed(2) : "0.00";
-        return { naam: s, val: bWon, txt: `${bWon} <span style="font-weight:normal;color:#888;">(${perc}%)</span>` };
-    }));
-
-    // Injecteer de juiste 6 blokken afhankelijk van statsPage (0 of 1)
     if (statsPage === 0) {
+        // PAGINA 1
+        let allCheckouts = [];
+        alleSpelers.forEach(s => { if(state.stats[s] && state.stats[s].checkouts) state.stats[s].checkouts.forEach(c => allCheckouts.push({naam: s, val: c})); });
+        let d_hgo = top7(allCheckouts);
+
+        let d_tot = top7(alleSpelers.map(s => {
+            let legs = state.stats[s]?.legsPlayed || 0;
+            let darts = state.stats[s]?.totalDarts || 0;
+            let avgLeg = legs > 0 ? (darts / legs).toFixed(2) : "0.00";
+            return { naam: s, val: darts, txt: `${darts} <span style="font-weight:normal;color:#888;">(${avgLeg}/L)</span>` };
+        }));
+
+        let d_avg = top7(alleSpelers.map(s => {
+            let v = state.stats[s]?.totalDarts > 0 ? ((state.stats[s].totalScore / state.stats[s].totalDarts)*3) : 0;
+            return { naam: s, val: v, txt: v.toFixed(2) };
+        }));
+
+        let d_dbl = top7(alleSpelers.map(s => {
+            let v = state.stats[s]?.doubleAttempts > 0 ? ((state.stats[s].doubleHits / state.stats[s].doubleAttempts)*100) : 0;
+            return { naam: s, val: v, txt: `${v.toFixed(2)}%` };
+        }));
+
+        let d_hgf = top7(alleSpelers.map(s => ({ naam: s, val: (state.stats[s]?.checkouts && state.stats[s].checkouts.length > 0) ? Math.max(...state.stats[s].checkouts) : 0 })));
+        
+        let d_slg = alleSpelers.map(s => { 
+            let sl = state.stats[s]?.shortestLeg || { darts: 999, avg: 0 }; 
+            return { naam: s, val: sl.darts === 999 ? 0 : sl.darts, txt: sl.darts === 999 ? '0' : `${sl.darts} <span style="font-weight:normal;color:#888;">(${parseFloat(sl.avg).toFixed(2)})</span>` }; 
+        }).filter(x => x.val > 0).sort((a,b) => a.val - b.val).slice(0,7);
+
         if(document.getElementById('sb-1')) document.getElementById('sb-1').innerHTML = statBox('3-Dart Avg', d_avg);
         if(document.getElementById('sb-2')) document.getElementById('sb-2').innerHTML = statBox('Double %', d_dbl);
         if(document.getElementById('sb-3')) document.getElementById('sb-3').innerHTML = statBox('H.Finish (Toernooi)', d_hgo);
         if(document.getElementById('sb-4')) document.getElementById('sb-4').innerHTML = statBox('H.Finish (Persoon)', d_hgf);
         if(document.getElementById('sb-5')) document.getElementById('sb-5').innerHTML = statBox('Totaal Pijlen (Avg/L)', d_tot);
-        if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = statBox('Kortste Leg', d_slg);
-    } else {
+        if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = statBox('Kortste Leg (Darts)', d_slg);
+
+    } else if (statsPage === 1) {
+        // PAGINA 2
+        let allScores = [];
+        alleSpelers.forEach(s => { if(state.stats[s] && state.stats[s].highScores) state.stats[s].highScores.forEach(c => allScores.push({naam: s, val: c})); });
+        let d_hsc = top7(allScores);
+
+        let d_mva = top7(alleSpelers.map(s => {
+            let v = (state.stats[s]?.matchAvgs && state.stats[s].matchAvgs.length > 0) ? Math.max(...state.stats[s].matchAvgs) : 0;
+            return { naam: s, val: v, txt: v.toFixed(2) };
+        }));
+
+        let d_f9a = top7(alleSpelers.map(s => {
+            let v = state.stats[s]?.first9Darts > 0 ? ((state.stats[s].first9Score / state.stats[s].first9Darts)*3) : 0;
+            return { naam: s, val: v, txt: v.toFixed(2) };
+        }));
+
+        let d_ton = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.tonPlus || 0 })));
+        let d_brk = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.breaks || 0 })));
+        
+        let d_bul = top7(alleSpelers.map(s => {
+            let bWon = state.stats[s]?.bullsWon || 0;
+            let mStarted = state.matches.filter(m => (m.p1 === s || m.p2 === s) && ['playing', 'post_match', 'finished'].includes(m.status)).length;
+            let perc = mStarted > 0 ? ((bWon / mStarted) * 100).toFixed(2) : "0.00";
+            return { naam: s, val: bWon, txt: `${bWon} <span style="font-weight:normal;color:#888;">(${perc}%)</span>` };
+        }));
+
         if(document.getElementById('sb-1')) document.getElementById('sb-1').innerHTML = statBox('Top Match Avg', d_mva);
         if(document.getElementById('sb-2')) document.getElementById('sb-2').innerHTML = statBox('First-9 Avg', d_f9a);
         if(document.getElementById('sb-3')) document.getElementById('sb-3').innerHTML = statBox('Ton-Plus (100+)', d_ton);
         if(document.getElementById('sb-4')) document.getElementById('sb-4').innerHTML = statBox('Bulls Gewonnen', d_bul);
         if(document.getElementById('sb-5')) document.getElementById('sb-5').innerHTML = statBox('Meeste Breaks', d_brk);
         if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = statBox('Hoogste Score', d_hsc);
+
+    } else {
+        // PAGINA 3: NIEUWE TIJD-STATS
+        let sortedLegsAsc = [...state.completedLegs].sort((a,b) => a.time - b.time).slice(0,7);
+        let d_fastLeg = sortedLegsAsc.map(l => ({ naam: l.winner, val: l.time, txt: `${formatTime(l.time)} <span style="font-weight:normal;color:#888;font-size:0.8em;">(vs ${l.loser.substring(0,3)})</span>` }));
+
+        let sortedLegsDesc = [...state.completedLegs].sort((a,b) => b.time - a.time).slice(0,7);
+        let d_slowLeg = sortedLegsDesc.map(l => ({ naam: l.winner, val: l.time, txt: `${formatTime(l.time)} <span style="font-weight:normal;color:#888;font-size:0.8em;">(vs ${l.loser.substring(0,3)})</span>` }));
+
+        let sortedMatchesAsc = [...state.completedMatches].sort((a,b) => a.time - b.time).slice(0,7);
+        let d_fastMatch = sortedMatchesAsc.map(l => ({ naam: l.winner, val: l.time, txt: `${formatTime(l.time)} <span style="font-weight:normal;color:#888;font-size:0.8em;">(vs ${l.loser.substring(0,3)})</span>` }));
+
+        let sortedMatchesDesc = [...state.completedMatches].sort((a,b) => b.time - a.time).slice(0,7);
+        let d_slowMatch = sortedMatchesDesc.map(l => ({ naam: l.winner, val: l.time, txt: `${formatTime(l.time)} <span style="font-weight:normal;color:#888;font-size:0.8em;">(vs ${l.loser.substring(0,3)})</span>` }));
+
+        let d_avgMatchDur = top7(alleSpelers.map(s => {
+            let matches = state.completedMatches.filter(m => m.winner === s || m.loser === s);
+            let total = matches.reduce((sum, m) => sum + m.time, 0);
+            let avg = matches.length > 0 ? (total / matches.length) : 0;
+            return { naam: s, val: avg, txt: avg > 0 ? formatTime(avg) : '-' };
+        }).filter(x => x.val > 0));
+
+        let currentTourneyTime = state.tournamentStartTime ? (Date.now() - state.tournamentStartTime) : 0;
+        let d_tourneyDur = [{ naam: "Toernooi Actief", val: currentTourneyTime, txt: `<span class="live-timer-tourney" data-start="${state.tournamentStartTime}">${formatTimeLong(currentTourneyTime)}</span>` }];
+
+        if(document.getElementById('sb-1')) document.getElementById('sb-1').innerHTML = statBox('Snelste Leg (Tijd)', d_fastLeg);
+        if(document.getElementById('sb-2')) document.getElementById('sb-2').innerHTML = statBox('Langste Leg (Tijd)', d_slowLeg);
+        if(document.getElementById('sb-3')) document.getElementById('sb-3').innerHTML = statBox('Kortste Match', d_fastMatch);
+        if(document.getElementById('sb-4')) document.getElementById('sb-4').innerHTML = statBox('Langste Match', d_slowMatch);
+        if(document.getElementById('sb-5')) document.getElementById('sb-5').innerHTML = statBox('Gem. Match Duur', d_avgMatchDur);
+        if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = statBox('Totale Toernooi Duur', d_tourneyDur);
     }
 }
 
@@ -626,6 +707,12 @@ window.bevestigBullenWinnaar = async function(mId, pNum) {
     const winNaam = pNum === 1 ? m.p1 : m.p2;
     state.stats[winNaam].bullsWon++;
     m.status = 'playing'; m.startThrower = pNum; m.turn = pNum;
+    
+    // TIMERS STARTEN
+    if (!state.tournamentStartTime) state.tournamentStartTime = Date.now();
+    m.matchStartTime = Date.now();
+    m.legStartTime = Date.now();
+    
     appContainer.innerHTML = '';
     await saveState(true);
 }
@@ -672,6 +759,7 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
     const dtLegStr = m.turn === 1 ? 'dartsLeg1' : 'dartsLeg2';
     const scLegStr = m.turn === 1 ? 'scoreLeg1' : 'scoreLeg2';
     const aP = m.turn === 1 ? m.p1 : m.p2;
+    const loser = aP === m.p1 ? m.p2 : m.p1;
 
     let calcScore = m[scStr] - score;
     let dartsThrown = isCheckout ? specDarts : 3;
@@ -720,6 +808,16 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
         if(m.turn === 1) m.legs1++; else m.legs2++;
         state.stats[m.p1].legsPlayed++; state.stats[m.p2].legsPlayed++;
 
+        // LEG TIJD OPSLAAN
+        let legTime = Date.now() - (m.legStartTime || Date.now());
+        state.completedLegs.push({ winner: aP, loser: loser, time: legTime, matchId: m.id });
+        if (legTime < state.records.fastestLegTime && legTime > 3000) {
+            state.records.fastestLegTime = legTime;
+            overlayQueue.push({ title: "RECORD SNELSTE LEG!", name: aP, subtitle: formatTime(legTime) + " TIJD" });
+        }
+        
+        m.legStartTime = Date.now(); // Reset klokje voor evt volgende leg
+
         overlayQueue.push({ title: "CHECKOUT!", name: aP, subtitle: score + " FINISH" });
 
         if (score > state.records.highestCheckout) {
@@ -739,6 +837,15 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
 
         if(m.legs1 === targets || m.legs2 === targets) {
             m.status = 'post_match'; 
+            
+            // MATCH TIJD OPSLAAN
+            let matchTime = Date.now() - (m.matchStartTime || Date.now());
+            state.completedMatches.push({ winner: aP, loser: loser, time: matchTime, matchId: m.id });
+            if (matchTime < state.records.fastestMatchTime && matchTime > 5000) {
+                state.records.fastestMatchTime = matchTime;
+                overlayQueue.push({ title: "RECORD KORTSTE MATCH!", name: aP, subtitle: formatTime(matchTime) + " TIJD" });
+            }
+
             let mAvg1 = parseFloat(((m.matchScore1 / m.matchDarts1)*3).toFixed(2));
             let mAvg2 = parseFloat(((m.matchScore2 / m.matchDarts2)*3).toFixed(2));
             state.stats[m.p1].matchAvgs.push(mAvg1);

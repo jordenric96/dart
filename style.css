@@ -51,7 +51,7 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .gold-card { border-color: var(--gold); background: #1a1510; }
 .gold-card h2 { color: var(--gold); border-bottom-color: var(--gold); }
 
-/* --- NIEUW: SUBTIELE AFTELBALK & 2x3 STATS GRID --- */
+/* --- SUBTIELE AFTELBALK & 2x3 STATS GRID --- */
 .stats-progress-container { width: 100%; height: 5px; background: #111; border-radius: 3px; margin-bottom: 0.5vh; overflow: hidden; border: 1px solid #222; flex-shrink: 0;}
 .stats-progress-fill { height: 100%; background: linear-gradient(90deg, var(--border), var(--gold)); width: 0%; transition: width 0.1s linear; }
 
@@ -65,7 +65,7 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
     background: linear-gradient(135deg, #1f2833 0%, #151a22 100%); border: 2px solid var(--border); border-radius: 8px; padding: 1vh 1vw; text-align: center; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: space-between; flex: 1.2;
 }
 .live-board.active { border-color: var(--gold); box-shadow: 0 0 15px var(--gold-glow); }
-.live-board h3 { margin: 0; font-size: 1rem; color: #fff; }
+.live-board h3 { margin: 0; font-size: 1rem; color: #fff; display: flex; justify-content: space-between; align-items: center; } /* Aangepast voor timers */
 .live-score-row { display: flex; justify-content: space-around; align-items: stretch; margin-top: 1vh; flex: 1;}
 
 .player-col { display: flex; flex-direction: column; align-items: center; width: 45%; transition: all 0.3s ease;}

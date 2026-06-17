@@ -166,20 +166,68 @@ function triggerOverlay(title, name, subtitle) {
     setTimeout(() => ov.classList.remove('show'), 5000);
 }
 
+// --- TABLET LOCK BEVEILIGING ---
+function updateNavButtons() {
+    const b1Active = state.matches.some(m => m.board === 'board1' && m.status !== 'finished' && m.status !== 'waiting');
+    const b2Active = state.matches.some(m => m.board === 'board2' && m.status !== 'finished' && m.status !== 'waiting');
+
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        let view = btn.getAttribute('data-view');
+        if (view === 'board1') {
+            if (b1Active && localStorage.getItem('myBoard') !== 'board1') {
+                btn.classList.add('locked-board-btn');
+                btn.innerHTML = '🔒 BORD 1';
+            } else {
+                btn.classList.remove('locked-board-btn');
+                btn.innerHTML = '🎯 BORD 1';
+            }
+        }
+        if (view === 'board2') {
+            if (b2Active && localStorage.getItem('myBoard') !== 'board2') {
+                btn.classList.add('locked-board-btn');
+                btn.innerHTML = '🔒 BORD 2';
+            } else {
+                btn.classList.remove('locked-board-btn');
+                btn.innerHTML = '🎯 BORD 2';
+            }
+        }
+    });
+}
+
+// Event listener vervangen met beveiligings-check
 navButtons.forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    // Eerst opschonen (indien nodig, of gewoon direct)
+    btn.onclick = (e) => {
+        let targetView = e.target.getAttribute('data-view');
+        
+        if (targetView === 'board1' || targetView === 'board2') {
+            const isActive = state.matches.some(m => m.board === targetView && m.status !== 'finished' && m.status !== 'waiting');
+            if (isActive && localStorage.getItem('myBoard') !== targetView) {
+                if(prompt(`Dit bord is in gebruik! Typ '1403' om over te nemen (bijv. na een crash):`) !== "1403") {
+                    return; // Stop navigatie
+                } else {
+                    localStorage.setItem('myBoard', targetView);
+                }
+            } else if (!isActive) {
+                localStorage.setItem('myBoard', targetView);
+            }
+        }
+
         navButtons.forEach(b => b.classList.remove('active'));
         e.target.classList.add('active');
-        currentView = e.target.getAttribute('data-view');
+        currentView = targetView;
         
-        const topNav = document.getElementById('top-nav');
-        if (currentView === 'dashboard') topNav.style.display = 'flex';
-        else topNav.style.display = 'none';
+        const topNav = document.getElementById('top-nav') || document.querySelector('.top-nav');
+        if (currentView === 'dashboard') {
+            if(topNav) topNav.style.display = 'flex';
+        } else {
+            if(topNav) topNav.style.display = 'none';
+        }
         
         padInputString = "";
         appContainer.innerHTML = ''; 
         render();
-    });
+    };
 });
 
 document.getElementById('reset-btn').addEventListener('click', async () => {
@@ -276,6 +324,7 @@ function render() {
         if(!document.getElementById('tablet-wrapper')) buildTabletSkeleton(currentView);
         updateTabletData(currentView);
     }
+    updateNavButtons(); // Update knoppen (rode locks indien nodig)
 }
 
 function buildDashboardSkeleton() {
@@ -320,7 +369,6 @@ function buildDashboardSkeleton() {
     appContainer.innerHTML = html;
 }
 
-// BORD 1 & BORD 2 Titels weg, layout strakker gecentreerd
 function generateTVBoardHTML(match) {
     if (!match) return `<div style="flex:1; display:flex; align-items:center; justify-content:center; font-size:2.5rem; color:#444; font-weight:bold; font-family:'Oswald', sans-serif;">BORD VRIJ</div>`;
     
@@ -664,6 +712,7 @@ window.numpadWissen = function() { padInputString = padInputString.slice(0, -1);
 window.numpadDrukPref = function(val) { padInputString = val.toString(); document.getElementById('pad-screen').innerText = padInputString; };
 
 window.koppelMatchAanBord = async function(mId, boardId) {
+    localStorage.setItem('myBoard', boardId);
     const m = state.matches.find(x => x.id === mId);
     m.board = boardId; m.status = 'bullen';
     appContainer.innerHTML = ''; 
@@ -676,6 +725,7 @@ window.sluitTabletEnFinishMatch = async function(mId) {
         actM.status = 'finished';
         await saveState(true);
     }
+    localStorage.removeItem('myBoard');
     sluitTablet();
 };
 
@@ -685,6 +735,7 @@ window.annuleerLopendeMatch = async function(mId) {
         m.status = 'waiting'; m.board = null; m.legs1 = 0; m.legs2 = 0; m.score1 = 501; m.score2 = 501;
         m.dartsLeg1 = 0; m.dartsLeg2 = 0; m.scoreLeg1 = 0; m.scoreLeg2 = 0;
         m.matchDarts1 = 0; m.matchScore1 = 0; m.matchDarts2 = 0; m.matchScore2 = 0;
+        localStorage.removeItem('myBoard');
         appContainer.innerHTML = '';
         await saveState(true);
     }
@@ -704,7 +755,13 @@ window.bevestigBullenWinnaar = async function(mId, pNum) {
     await saveState(true);
 }
 
-window.sluitTablet = function() { document.getElementById('top-nav').style.display = 'flex'; currentView = 'dashboard'; appContainer.innerHTML = ''; render(); }
+window.sluitTablet = function() { 
+    const topNav = document.getElementById('top-nav') || document.querySelector('.top-nav');
+    if(topNav) topNav.style.display = 'flex'; 
+    currentView = 'dashboard'; 
+    appContainer.innerHTML = ''; 
+    render(); 
+}
 
 window.verwerkIngevuldeScore = async function(mId) {
     let score = parseInt(padInputString) || 0;
@@ -857,7 +914,10 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
                 if (actM && actM.status === 'post_match') {
                     actM.status = 'finished';
                     await saveState(true);
-                    if (currentView === actM.board) sluitTablet();
+                    if (currentView === actM.board) {
+                        localStorage.removeItem('myBoard');
+                        sluitTablet();
+                    }
                 }
             }, 25000);
             

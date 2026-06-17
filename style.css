@@ -2,7 +2,7 @@
     --bg-dark: #0b0c10; --card-bg: #1f2833; --gold: #ffb703;
     --gold-glow: rgba(255, 183, 3, 0.4); --text-main: #c5c6c7;
     --text-light: #ffffff; --neon-green: #06d6a0; --neon-red: #ff4d6d;
-    --border: #45a29e; --bg-dim: #11141a;
+    --border: #45a29e; --bg-dim: #11141a; --silver: #e0e0e0;
 }
 
 body {
@@ -46,6 +46,12 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
     border-bottom: 2px solid var(--border); padding-bottom: 0.3vh; text-align: left; flex-shrink: 0;
 }
 
+/* Zilver en Goud Blokken */
+.silver-card { border-color: var(--silver); background: #16181d; }
+.silver-card h2 { color: var(--silver); border-bottom-color: var(--silver); }
+.gold-card { border-color: var(--gold); background: #1a1510; }
+.gold-card h2 { color: var(--gold); border-bottom-color: var(--gold); }
+
 /* 3x4 Stats Grid (12 Vakken) */
 .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(4, 1fr); gap: 0.5vw; height: 100%; }
 .stat-box { background: var(--bg-dim); border: 1px solid #333; border-radius: 6px; padding: 0.2vh 0.4vw; display: flex; flex-direction: column; overflow: hidden; justify-content: center;}
@@ -85,7 +91,7 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .punten-cel { color: var(--gold); font-weight: bold; font-size: 1.1em; }
 
 .knockout-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #333; padding: 0.8vh 0; font-size: clamp(0.8rem, 1.6vh, 1rem); }
-.knockout-title { font-size: 0.8em; color: var(--gold); width: 80px; font-weight: bold; text-transform: uppercase;}
+.knockout-title { font-size: 0.8em; width: 80px; font-weight: bold; text-transform: uppercase;}
 
 /* Roterend Wedstrijdschema Linksonder */
 .poule-item { font-size: clamp(0.7rem, 1.5vh, 0.95rem); display: flex; align-items: center; border-bottom: 1px solid #222; padding: 0.3vh 0; width: 100%;}

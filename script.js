@@ -11,12 +11,11 @@ let padInputString = "";
 let windowLastOverlayTime = 0;
 let logboekIndex = 0;
 let statsPage = 0;
-let dashboardTimerMs = 0; // Centrale timer voor vlotte animaties en updates
+let dashboardTimerMs = 0; 
 
 const appContainer = document.getElementById('app-container');
 const navButtons = document.querySelectorAll('.nav-btn');
 
-// --- OVERLAY GENERATOR ---
 if (!document.getElementById('finish-overlay')) {
     let ov = document.createElement('div');
     ov.id = 'finish-overlay';
@@ -24,7 +23,6 @@ if (!document.getElementById('finish-overlay')) {
     document.body.appendChild(ov);
 }
 
-// --- TIJD FORMATTERING ---
 function formatTime(ms) {
     if (!ms || ms < 0) return "00:00";
     let totalSeconds = Math.floor(ms / 1000);
@@ -41,7 +39,6 @@ function formatTimeLong(ms) {
     return `${h > 0 ? (h + ':') : ''}${m < 10 ? '0':''}${m}:${s < 10 ? '0':''}${s}`;
 }
 
-// --- DATABASE & REALTIME ---
 async function init() {
     try {
         const { data, error } = await supabaseClient.from('toernooi_data').select('state').eq('id', 1).single();
@@ -50,8 +47,7 @@ async function init() {
             state = data.state;
             if (state.lastOverlay) windowLastOverlayTime = state.lastOverlay.time;
             
-            // Initialiseer nieuwe record en stat lijsten als ze missen
-            if (!state.records) state.records = { highestCheckout: 0, shortestLeg: 999, highestMatchAvg: 0, highestScore: 0 };
+            if (!state.records) state.records = { highestCheckout: 0, shortestLeg: 999, highestMatchAvg: 0, highestScore: 0, fastestLegTime: 99999999, fastestMatchTime: 99999999 };
             if (state.records.highestScore === undefined) state.records.highestScore = 0;
             if (state.records.fastestLegTime === undefined) state.records.fastestLegTime = 99999999;
             if (state.records.fastestMatchTime === undefined) state.records.fastestMatchTime = 99999999;
@@ -96,12 +92,10 @@ async function init() {
             await saveState(true);
         }
         
-        // Centrale Master Timer (elke 100ms)
         setInterval(() => {
             if(currentView === 'dashboard') {
                 dashboardTimerMs += 100;
                 
-                // Update live timers in de UI
                 document.querySelectorAll('.live-timer-match').forEach(el => {
                     let start = parseInt(el.getAttribute('data-start'));
                     if(start) el.innerText = formatTime(Date.now() - start);
@@ -115,19 +109,16 @@ async function init() {
                     if(start) el.innerText = formatTimeLong(Date.now() - start);
                 });
 
-                // Schema rouleren (10 sec)
                 if (dashboardTimerMs % 10000 === 0) {
                     logboekIndex = (logboekIndex + 1) % 3;
                     updateLogboekOnly();
                 }
                 
-                // Stats rouleren (15 sec) -> 3 pagina's!
                 if (dashboardTimerMs % 15000 === 0) {
                     statsPage = (statsPage + 1) % 3;
                     updateDashboardData();
                 }
 
-                // Aftelbalk live vullen
                 let bar = document.getElementById('stats-timer-bar');
                 if (bar) {
                     let perc = ((dashboardTimerMs % 15000) / 15000) * 100;
@@ -329,15 +320,17 @@ function buildDashboardSkeleton() {
     appContainer.innerHTML = html;
 }
 
-function generateTVBoardHTML(title, match) {
-    if (!match) return `<h3>${title}</h3><div style="flex:1; display:flex; align-items:center; justify-content:center; font-size:1.5rem; color:#444;">Bord Vrij</div>`;
-    if (match.status === 'bullen') return `<h3>${title}</h3><div class="live-match-title">${match.p1} vs ${match.p2}</div><div style="flex:1; display:flex; align-items:center; justify-content:center; color:var(--gold); font-size:1.4rem;">🐂 BULLEN VOOR START 🐂</div>`;
+// BORD 1 & BORD 2 Titels weg, layout strakker gecentreerd
+function generateTVBoardHTML(match) {
+    if (!match) return `<div style="flex:1; display:flex; align-items:center; justify-content:center; font-size:2.5rem; color:#444; font-weight:bold; font-family:'Oswald', sans-serif;">BORD VRIJ</div>`;
+    
+    if (match.status === 'bullen') return `<div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;"><div class="live-match-title" style="font-size:2rem; font-weight:bold; margin-bottom:10px;">${match.p1} VS ${match.p2}</div><div style="color:var(--gold); font-size:1.5rem; font-weight:bold;">🐂 BULLEN VOOR START 🐂</div></div>`;
     
     if (match.status === 'post_match') {
         let mAvg1 = match.matchDarts1 > 0 ? ((match.matchScore1 / match.matchDarts1) * 3).toFixed(2) : "0.00";
         let mAvg2 = match.matchDarts2 > 0 ? ((match.matchScore2 / match.matchDarts2) * 3).toFixed(2) : "0.00";
         return `
-            <h3 style="color:var(--gold);">📊 MATCH STATS: ${match.p1} VS ${match.p2}</h3>
+            <h3 style="color:var(--gold); display:flex; justify-content:center; margin-top:0;">📊 MATCH STATS</h3>
             <div style="display:flex; justify-content:space-around; align-items:center; flex:1; text-transform:uppercase;">
                 <div style="text-align:center;">
                     <h2 style="color:var(--gold); font-size:2.2rem; margin:0;">${match.p1}</h2>
@@ -364,12 +357,11 @@ function generateTVBoardHTML(title, match) {
     let mom1 = Math.min(100, (match.dartsLeg1 / 24) * 100); 
     let mom2 = Math.min(100, (match.dartsLeg2 / 24) * 100); 
 
-    // Timers in de h3 toegevoegd
-    let timerHTML = `<span style="font-size:0.8rem; color:var(--gold); font-family:monospace;">M: <span class="live-timer-match" data-start="${match.matchStartTime}">00:00</span> | L: <span class="live-timer-leg" data-start="${match.legStartTime}">00:00</span></span>`;
+    let timerHTML = `<span style="font-size:0.8em; color:var(--gold);">M: <span class="live-timer-match" data-start="${match.matchStartTime}">00:00</span> | L: <span class="live-timer-leg" data-start="${match.legStartTime}">00:00</span></span>`;
 
     return `
-        <h3>
-            <span>${title} <span style="font-size:0.5em; background:#444; padding:2px 8px; border-radius:4px; margin-left:10px;">${matchFase} | Leg ${match.legs1 + match.legs2 + 1}</span></span>
+        <h3 style="margin-top:0;">
+            <span style="font-size:0.7em; background:#444; padding:4px 10px; border-radius:4px;">${matchFase} | Leg ${match.legs1 + match.legs2 + 1}</span>
             ${timerHTML}
         </h3>
         <div class="live-score-row">
@@ -428,8 +420,8 @@ function updateDashboardData() {
     
     let b1El = document.getElementById('tv-b1');
     let b2El = document.getElementById('tv-b2');
-    if(b1El) { b1El.innerHTML = generateTVBoardHTML('🎯 BORD 1', activeB1); activeB1?b1El.classList.add('active'):b1El.classList.remove('active'); }
-    if(b2El) { b2El.innerHTML = generateTVBoardHTML('🎯 BORD 2', activeB2); activeB2?b2El.classList.add('active'):b2El.classList.remove('active'); }
+    if(b1El) { b1El.innerHTML = generateTVBoardHTML(activeB1); activeB1?b1El.classList.add('active'):b1El.classList.remove('active'); }
+    if(b2El) { b2El.innerHTML = generateTVBoardHTML(activeB2); activeB2?b2El.classList.add('active'):b2El.classList.remove('active'); }
 
     updateLogboekOnly();
 
@@ -454,12 +446,10 @@ function updateDashboardData() {
     if(document.getElementById('tv-semi-finals')) document.getElementById('tv-semi-finals').innerHTML = koHtml('HF 1', hf1, 'silver') + koHtml('HF 2', hf2, 'silver');
     if(document.getElementById('tv-finals')) document.getElementById('tv-finals').innerHTML = koHtml('FINALE', fin, 'gold');
 
-    // 3 Pagina's Stats (0, 1, 2)
     const top7 = (arr) => arr.sort((a,b) => b.val - a.val).slice(0,7); 
     const statBox = (t, d) => `<h3>${t}</h3><table class="retro-table">${d.map((x,i)=>`<tr><td style="width:15px;">${i+1}</td><td style="text-align:left;">${x.naam}</td><td style="font-weight:bold;text-align:right;">${x.txt !== undefined ? x.txt : x.val}</td></tr>`).join('')}</table>`;
 
     if (statsPage === 0) {
-        // PAGINA 1
         let allCheckouts = [];
         alleSpelers.forEach(s => { if(state.stats[s] && state.stats[s].checkouts) state.stats[s].checkouts.forEach(c => allCheckouts.push({naam: s, val: c})); });
         let d_hgo = top7(allCheckouts);
@@ -496,7 +486,6 @@ function updateDashboardData() {
         if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = statBox('Kortste Leg (Darts)', d_slg);
 
     } else if (statsPage === 1) {
-        // PAGINA 2
         let allScores = [];
         alleSpelers.forEach(s => { if(state.stats[s] && state.stats[s].highScores) state.stats[s].highScores.forEach(c => allScores.push({naam: s, val: c})); });
         let d_hsc = top7(allScores);
@@ -529,7 +518,6 @@ function updateDashboardData() {
         if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = statBox('Hoogste Score', d_hsc);
 
     } else {
-        // PAGINA 3: NIEUWE TIJD-STATS
         let sortedLegsAsc = [...state.completedLegs].sort((a,b) => a.time - b.time).slice(0,7);
         let d_fastLeg = sortedLegsAsc.map(l => ({ naam: l.winner, val: l.time, txt: `${formatTime(l.time)} <span style="font-weight:normal;color:#888;font-size:0.8em;">(vs ${l.loser.substring(0,3)})</span>` }));
 
@@ -550,14 +538,14 @@ function updateDashboardData() {
         }).filter(x => x.val > 0));
 
         let currentTourneyTime = state.tournamentStartTime ? (Date.now() - state.tournamentStartTime) : 0;
-        let d_tourneyDur = [{ naam: "Toernooi Actief", val: currentTourneyTime, txt: `<span class="live-timer-tourney" data-start="${state.tournamentStartTime}">${formatTimeLong(currentTourneyTime)}</span>` }];
+        let d_tourneyDur = [{ naam: "Actieve Duur", val: currentTourneyTime, txt: `<span class="live-timer-tourney" data-start="${state.tournamentStartTime}">${formatTimeLong(currentTourneyTime)}</span>` }];
 
         if(document.getElementById('sb-1')) document.getElementById('sb-1').innerHTML = statBox('Snelste Leg (Tijd)', d_fastLeg);
         if(document.getElementById('sb-2')) document.getElementById('sb-2').innerHTML = statBox('Langste Leg (Tijd)', d_slowLeg);
         if(document.getElementById('sb-3')) document.getElementById('sb-3').innerHTML = statBox('Kortste Match', d_fastMatch);
         if(document.getElementById('sb-4')) document.getElementById('sb-4').innerHTML = statBox('Langste Match', d_slowMatch);
         if(document.getElementById('sb-5')) document.getElementById('sb-5').innerHTML = statBox('Gem. Match Duur', d_avgMatchDur);
-        if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = statBox('Totale Toernooi Duur', d_tourneyDur);
+        if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = statBox('Toernooi Klok', d_tourneyDur);
     }
 }
 
@@ -708,7 +696,6 @@ window.bevestigBullenWinnaar = async function(mId, pNum) {
     state.stats[winNaam].bullsWon++;
     m.status = 'playing'; m.startThrower = pNum; m.turn = pNum;
     
-    // TIMERS STARTEN
     if (!state.tournamentStartTime) state.tournamentStartTime = Date.now();
     m.matchStartTime = Date.now();
     m.legStartTime = Date.now();
@@ -808,7 +795,6 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
         if(m.turn === 1) m.legs1++; else m.legs2++;
         state.stats[m.p1].legsPlayed++; state.stats[m.p2].legsPlayed++;
 
-        // LEG TIJD OPSLAAN
         let legTime = Date.now() - (m.legStartTime || Date.now());
         state.completedLegs.push({ winner: aP, loser: loser, time: legTime, matchId: m.id });
         if (legTime < state.records.fastestLegTime && legTime > 3000) {
@@ -816,7 +802,7 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
             overlayQueue.push({ title: "RECORD SNELSTE LEG!", name: aP, subtitle: formatTime(legTime) + " TIJD" });
         }
         
-        m.legStartTime = Date.now(); // Reset klokje voor evt volgende leg
+        m.legStartTime = Date.now();
 
         overlayQueue.push({ title: "CHECKOUT!", name: aP, subtitle: score + " FINISH" });
 
@@ -838,7 +824,6 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
         if(m.legs1 === targets || m.legs2 === targets) {
             m.status = 'post_match'; 
             
-            // MATCH TIJD OPSLAAN
             let matchTime = Date.now() - (m.matchStartTime || Date.now());
             state.completedMatches.push({ winner: aP, loser: loser, time: matchTime, matchId: m.id });
             if (matchTime < state.records.fastestMatchTime && matchTime > 5000) {

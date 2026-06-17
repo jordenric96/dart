@@ -1,15 +1,8 @@
 {
-  "name": "OG's Pro Darts 2026",
-  "short_name": "Pro Darts",
-  "start_url": "./index.html",
+  "name": "OG Pro Darts",
+  "short_name": "ProDarts",
+  "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#e5e5e5",
-  "theme_color": "#ffe600",
-  "icons": [
-    {
-      "src": "https://cdn-icons-png.flaticon.com/512/3203/3203028.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
-  ]
+  "background_color": "#1a1a1a",
+  "theme_color": "#ffc107"
 }

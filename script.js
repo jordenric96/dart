@@ -328,8 +328,8 @@ function updateDashboardData() {
     
     let b1El = document.getElementById('tv-b1');
     let b2El = document.getElementById('tv-b2');
-    if(b1El) { b1El.innerHTML = generateTVBoardHTML('🎯 BORD 1', activeB1); activeB1?b1El.classList.add('active'):b1El.classList.remove('active'); }
-    if(b2El) { b2El.innerHTML = generateTVBoardHTML('🎯 BORD 2', activeB2); activeB2?b2El.classList.add('active'):b2El.classList.remove('active'); }
+    if(b1El) { b1El.innerHTML = generateTVBoardHTML('', activeB1); activeB1?b1El.classList.add('active'):b1El.classList.remove('active'); }
+    if(b2El) { b2El.innerHTML = generateTVBoardHTML('', activeB2); activeB2?b2El.classList.add('active'):b2El.classList.remove('active'); }
 
     updateLogboekOnly();
 
@@ -386,13 +386,13 @@ function updateDashboardData() {
 
     if(document.getElementById('sb-1')) document.getElementById('sb-1').innerHTML = statBox('3-Dart Avg', d_avg);
     if(document.getElementById('sb-2')) document.getElementById('sb-2').innerHTML = statBox('Double %', d_dbl);
-    if(document.getElementById('sb-3')) document.getElementById('sb-3').innerHTML = statBox('H.Finish (Toernooi)', d_hgo);
-    if(document.getElementById('sb-4')) document.getElementById('sb-4').innerHTML = statBox('H.Finish (Persoon)', d_hgf);
+    if(document.getElementById('sb-3')) document.getElementById('sb-3').innerHTML = statBox('Hoogste Finish', d_hgo);
+    if(document.getElementById('sb-4')) document.getElementById('sb-4').innerHTML = statBox('Hoogste Finish/Persoon)', d_hgf);
     if(document.getElementById('sb-5')) document.getElementById('sb-5').innerHTML = statBox('Totaal Pijlen (Avg/L)', d_tot);
     if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = statBox('Kortste Leg', d_slg);
     if(document.getElementById('sb-7')) document.getElementById('sb-7').innerHTML = statBox('Top Match Avg', d_mva);
     if(document.getElementById('sb-8')) document.getElementById('sb-8').innerHTML = statBox('First-9 Avg', d_f9a);
-    if(document.getElementById('sb-9')) document.getElementById('sb-9').innerHTML = statBox('Ton-Plus (100+)', d_ton);
+    if(document.getElementById('sb-9')) document.getElementById('sb-9').innerHTML = statBox('Ton-Plus', d_ton);
     if(document.getElementById('sb-10')) document.getElementById('sb-10').innerHTML = statBox('Max 180s', d_180);
     if(document.getElementById('sb-11')) document.getElementById('sb-11').innerHTML = statBox('Meeste Breaks', d_brk);
     if(document.getElementById('sb-12')) document.getElementById('sb-12').innerHTML = statBox('Hoogste Score', d_hsc);

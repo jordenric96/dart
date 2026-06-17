@@ -3,12 +3,13 @@ const supabaseUrl = 'https://jpvgcgjnhvutqtrkbamc.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwdmdjZ2puaHZ1dHF0cmtiYW1jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3MTIxMzgsImV4cCI6MjA5NzI4ODEzOH0.edR9Ve6FOOre5DcmHDoAPSF0rIsU_DVX1KFy9pQACyI';
 const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
+
 const alleSpelers = ["Jorden", "Yarni", "Joël", "Vince", "Stefaan", "Wim", "Tibe"];
 
 let state = { matches: [], standings: [], stats: {}, records: null, lastOverlay: null };
 let currentView = 'dashboard';
 let padInputString = ""; 
-let windowLastOverlayTime = 0;
+let windowLastOverlayTime = 0; // Fix voor de klok-desynchronisatie
 let logboekIndex = 0;
 
 const appContainer = document.getElementById('app-container');
@@ -18,6 +19,7 @@ const navButtons = document.querySelectorAll('.nav-btn');
 if (!document.getElementById('finish-overlay')) {
     let ov = document.createElement('div');
     ov.id = 'finish-overlay';
+    // Let op: PDC is hier zoals gevraagd overal weggehaald!
     ov.innerHTML = `<div class="finish-title" id="fo-title">CHECKOUT</div><div class="finish-name" id="fo-name"></div><div class="finish-score" id="fo-score"></div>`;
     document.body.appendChild(ov);
 }
@@ -30,7 +32,13 @@ async function init() {
         if (data && data.state && Object.keys(data.state).length > 0) {
             state = data.state;
             
-            if (!state.records) state.records = { highestCheckout: 0, shortestLeg: 999, highestMatchAvg: 0 };
+            // Zorg dat we niet bij een F5-refresh plotseling oude overlays tonen
+            if (state.lastOverlay) {
+                windowLastOverlayTime = state.lastOverlay.time;
+            }
+
+            if (!state.records) state.records = { highestCheckout: 0, shortestLeg: 999, highestMatchAvg: 0, highestScore: 0 };
+            if (state.records.highestScore === undefined) state.records.highestScore = 0;
 
             alleSpelers.forEach(s => {
                 if(!state.stats[s]) state.stats[s] = {};
@@ -40,7 +48,7 @@ async function init() {
                 state.stats[s].breaks = state.stats[s].breaks || 0;
                 state.stats[s].first9Score = state.stats[s].first9Score || 0;
                 state.stats[s].first9Darts = state.stats[s].first9Darts || 0;
-                state.stats[s].highestScore = state.stats[s].highestScore || 0; // Nieuw voor Top 7 Hoogste Scores
+                state.stats[s].highestScore = state.stats[s].highestScore || 0; 
                 state.stats[s].max180 = state.stats[s].max180 || 0;
                 if (!state.stats[s].checkouts) state.stats[s].checkouts = [];
             });
@@ -89,12 +97,11 @@ async function saveState(forceRender = false) {
     await supabaseClient.from('toernooi_data').upsert({ id: 1, state: state });
 }
 
+// BUGFIX: De overlay-trigger negeert nu klokverschillen en triggert ALTIJD perfect
 function checkOverlayTrigger() {
-    if (state.lastOverlay && (Date.now() - state.lastOverlay.time < 6000)) {
-        if (windowLastOverlayTime !== state.lastOverlay.time) {
-            triggerOverlay(state.lastOverlay.title, state.lastOverlay.name, state.lastOverlay.subtitle);
-            windowLastOverlayTime = state.lastOverlay.time;
-        }
+    if (state.lastOverlay && state.lastOverlay.time !== windowLastOverlayTime) {
+        triggerOverlay(state.lastOverlay.title, state.lastOverlay.name, state.lastOverlay.subtitle);
+        windowLastOverlayTime = state.lastOverlay.time;
     }
 }
 
@@ -130,7 +137,7 @@ document.getElementById('reset-btn').addEventListener('click', async () => {
         await saveState(true);
         appContainer.innerHTML = '';
         render();
-        alert("Database gereset!");
+        alert("Systeem gereset!");
     }
 });
 
@@ -161,7 +168,7 @@ function genereerRoundRobinSchema() {
 
 function initStatsKlassen() {
     state.stats = {};
-    state.records = { highestCheckout: 0, shortestLeg: 999, highestMatchAvg: 0 };
+    state.records = { highestCheckout: 0, shortestLeg: 999, highestMatchAvg: 0, highestScore: 0 };
     alleSpelers.forEach(s => {
         state.stats[s] = { 
             totalDarts: 0, totalScore: 0, legsPlayed: 0, checkouts: [], 
@@ -328,8 +335,8 @@ function updateDashboardData() {
     
     let b1El = document.getElementById('tv-b1');
     let b2El = document.getElementById('tv-b2');
-    if(b1El) { b1El.innerHTML = generateTVBoardHTML('', activeB1); activeB1?b1El.classList.add('active'):b1El.classList.remove('active'); }
-    if(b2El) { b2El.innerHTML = generateTVBoardHTML('', activeB2); activeB2?b2El.classList.add('active'):b2El.classList.remove('active'); }
+    if(b1El) { b1El.innerHTML = generateTVBoardHTML('🎯 BORD 1', activeB1); activeB1?b1El.classList.add('active'):b1El.classList.remove('active'); }
+    if(b2El) { b2El.innerHTML = generateTVBoardHTML('🎯 BORD 2', activeB2); activeB2?b2El.classList.add('active'):b2El.classList.remove('active'); }
 
     updateLogboekOnly();
 
@@ -380,14 +387,12 @@ function updateDashboardData() {
     let d_ton = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.tonPlus || 0 })));
     let d_180 = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.max180 || 0 })));
     let d_brk = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.breaks || 0 })));
-    
-    // NIEUW: Hoogste Scores in plaats van Whitewashes
     let d_hsc = top7(alleSpelers.map(s => ({ naam: s, val: state.stats[s]?.highestScore || 0 })));
 
     if(document.getElementById('sb-1')) document.getElementById('sb-1').innerHTML = statBox('3-Dart Avg', d_avg);
     if(document.getElementById('sb-2')) document.getElementById('sb-2').innerHTML = statBox('Double %', d_dbl);
-    if(document.getElementById('sb-3')) document.getElementById('sb-3').innerHTML = statBox('Hoogste Finish', d_hgo);
-    if(document.getElementById('sb-4')) document.getElementById('sb-4').innerHTML = statBox('Hoogste Finish/Persoon)', d_hgf);
+    if(document.getElementById('sb-3')) document.getElementById('sb-3').innerHTML = statBox('H.Finish (Toernooi)', d_hgo);
+    if(document.getElementById('sb-4')) document.getElementById('sb-4').innerHTML = statBox('H.Finish (Persoon)', d_hgf);
     if(document.getElementById('sb-5')) document.getElementById('sb-5').innerHTML = statBox('Totaal Pijlen (Avg/L)', d_tot);
     if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = statBox('Kortste Leg', d_slg);
     if(document.getElementById('sb-7')) document.getElementById('sb-7').innerHTML = statBox('Top Match Avg', d_mva);
@@ -444,7 +449,6 @@ function updateTabletData(boardId) {
         let avg2 = m.matchDarts2 > 0 ? ((m.matchScore2 / m.matchDarts2) * 3).toFixed(1) : "0.0";
         let titleStr = m.fase === 'poule' ? 'FIRST TO 3 LEGS (BO5)' : '🔥 FIRST TO 4 LEGS (BO7)';
 
-        // Nieuwe focus/dim styling voor de speler blokken op de tablet!
         wrap.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1vh;">
                 <span style="font-size:1.5rem; font-weight:bold; color:var(--gold);">${boardId.toUpperCase()} - ${titleStr}</span>
@@ -556,8 +560,19 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
     let calcScore = m[scStr] - score;
     let dartsThrown = isCheckout ? specDarts : 3;
 
-    // Track Highest 3-Dart Score per player
-    if (score > state.stats[aP].highestScore) state.stats[aP].highestScore = score;
+    // Queue voor de overlays, de laatste (belangrijkste) overschrijft
+    let overlayQueue = [];
+
+    // Track persoonlijke hoogste score
+    if (score > state.stats[aP].highestScore) {
+        state.stats[aP].highestScore = score;
+    }
+
+    // TOERNOOI RECORD SCORES (Zelfs voor een score van 5)
+    if (score > state.records.highestScore) {
+        state.records.highestScore = score;
+        overlayQueue.push({ title: "NIEUW RECORD!", name: aP, subtitle: score + " HOOGSTE SCORE" });
+    }
 
     if (m[dtLegStr] < 9) {
         let maxC = Math.min(9 - m[dtLegStr], dartsThrown);
@@ -589,10 +604,10 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
         if(m.turn === 1) m.legs1++; else m.legs2++;
         state.stats[m.p1].legsPlayed++; state.stats[m.p2].legsPlayed++;
 
-        // OVERLAY LOGIC (Records & Checkouts)
-        let overlayQueue = [];
+        // Standaard Checkout Overlay
         overlayQueue.push({ title: "CHECKOUT!", name: aP, subtitle: score + " FINISH" });
 
+        // Record Checkout Overlay
         if (score > state.records.highestCheckout) {
             state.records.highestCheckout = score;
             overlayQueue.push({ title: "RECORD FINISH!", name: aP, subtitle: score + " CHECKOUT" });
@@ -601,6 +616,7 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
         let legAvg = ((m[scLegStr] / m[dtLegStr]) * 3).toFixed(1);
         if (m[dtLegStr] < state.stats[aP].shortestLeg.darts) state.stats[aP].shortestLeg = { darts: m[dtLegStr], avg: legAvg };
         
+        // Record Kortste Leg Overlay
         if (m[dtLegStr] < state.records.shortestLeg) {
             state.records.shortestLeg = m[dtLegStr];
             overlayQueue.push({ title: "RECORD KORTSTE LEG!", name: aP, subtitle: m[dtLegStr] + " PIJLEN" });
@@ -615,6 +631,7 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
             state.stats[m.p1].matchAvgs.push(mAvg1);
             state.stats[m.p2].matchAvgs.push(mAvg2);
 
+            // Record Match Avg Overlay
             if (m.turn === 1 && mAvg1 > state.records.highestMatchAvg) {
                  state.records.highestMatchAvg = mAvg1;
                  overlayQueue.push({ title: "RECORD MATCH AVG!", name: m.p1, subtitle: mAvg1 + " AVG" });
@@ -623,8 +640,6 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
                  overlayQueue.push({ title: "RECORD MATCH AVG!", name: m.p2, subtitle: mAvg2 + " AVG" });
             }
 
-            if (m.legs1 === 0 || m.legs2 === 0) state.stats[aP].whitewashes++;
-            
             if (overlayQueue.length > 0) {
                 let best = overlayQueue[overlayQueue.length - 1];
                 state.lastOverlay = { ...best, time: Date.now() };
@@ -653,6 +668,11 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
     state.stats[aP].totalDarts += 3; state.stats[aP].totalScore += score;
     if(score >= 100) state.stats[aP].tonPlus++;
     if(score === 180) state.stats[aP].max180++;
+
+    if (overlayQueue.length > 0) {
+        let best = overlayQueue[overlayQueue.length - 1];
+        state.lastOverlay = { ...best, time: Date.now() };
+    }
 
     m.turn = m.turn === 1 ? 2 : 1;
     await saveState(true);

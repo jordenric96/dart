@@ -7,28 +7,33 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Patrick+Hand&display=swap" rel="stylesheet">
     
+    <!-- Supabase Inladen -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-    <nav class="top-nav">
-        <div class="nav-title">OG's DARTTOERNOOI</div>
+    <!-- Navigatie: Kies je scherm op dit apparaat -->
+    <nav class="top-nav" id="top-nav">
+        <div class="nav-title">OG's DARTTOERNOOI '26</div>
         <div class="nav-buttons">
-            <button class="nav-btn active" data-view="dashboard">💻 Dashboard</button>
-            <button class="nav-btn" data-view="board1">🎯 Bord 1</button>
-            <button class="nav-btn" data-view="board2">🎯 Bord 2</button>
+            <button class="nav-btn active" data-view="dashboard">💻 TV Dashboard</button>
+            <button class="nav-btn" data-view="board1">🎯 Bord 1 App</button>
+            <button class="nav-btn" data-view="board2">🎯 Bord 2 App</button>
         </div>
     </nav>
 
+    <!-- App Container waar de views in geladen worden -->
     <main id="app-container"></main>
 
+    <!-- Modals (Pop-ups voor Bullen & Uitgooien op de tablets) -->
     <div id="action-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content retro-receipt" id="modal-content">
-            </div>
+            <!-- Wordt gevuld door JS -->
+        </div>
     </div>
 
-    <div style="position: fixed; bottom: 10px; right: 10px; opacity: 0.5;">
-        <button id="reset-btn" class="retro-button danger" style="padding: 5px; font-size: 0.7em;">Reset Alles</button>
+    <div style="position: fixed; bottom: 10px; right: 10px; opacity: 0.2; z-index: 100;">
+        <button id="reset-btn" class="retro-button danger" style="padding: 2px 5px; font-size: 0.6em;">Reset DB</button>
     </div>
 
     <script src="script.js"></script>

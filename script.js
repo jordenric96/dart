@@ -9,11 +9,11 @@ let state = { matches: [], standings: [], stats: {}, lastCheckout: null };
 let currentView = 'dashboard';
 let padInputString = ""; 
 let windowLastCheckoutTime = 0;
+let logboekIndex = 0; // Voor de 10-seconden carrousel
 
 const appContainer = document.getElementById('app-container');
 const navButtons = document.querySelectorAll('.nav-btn');
 
-// Zorg voor de Finish Overlay in de DOM
 if (!document.getElementById('finish-overlay')) {
     let ov = document.createElement('div');
     ov.id = 'finish-overlay';
@@ -61,6 +61,14 @@ async function init() {
             await saveState(true);
         }
         
+        // Timer: 10 seconden roterend Wedstrijdschema
+        setInterval(() => {
+            if(currentView === 'dashboard') {
+                logboekIndex = (logboekIndex + 1) % 3; // 3 pagina's van 7 matchen
+                updateLogboekOnly();
+            }
+        }, 10000);
+
         render();
 
         supabaseClient.channel('darts-realtime').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'toernooi_data' }, (payload) => {
@@ -193,7 +201,6 @@ function berekenKlassement() {
     }
 }
 
-// --- RENDERING ENGINE (FLICKER FREE) ---
 function render() {
     if (currentView === 'dashboard') {
         if(!document.getElementById('dashboard-wrapper')) buildDashboardSkeleton();
@@ -208,10 +215,17 @@ function buildDashboardSkeleton() {
     let html = `
     <div id="dashboard-wrapper" class="dashboard-layout">
         <div class="dashboard-top">
+            <!-- Kolom 1: Borden & Roterend Schema -->
             <div class="grid-col">
-                <div class="live-board" id="tv-b1"></div>
-                <div class="live-board" id="tv-b2"></div>
+                <div class="live-board" id="tv-b1" style="flex: 1.2;"></div>
+                <div class="live-board" id="tv-b2" style="flex: 1.2;"></div>
+                <div class="card" style="flex: 1.5; justify-content: space-between;">
+                    <h2 id="logboek-title">📋 SCHEMA (P. 1/3)</h2>
+                    <div id="tv-logboek-content" style="display:flex; flex-direction:column; justify-content:space-evenly; height:100%;"></div>
+                </div>
             </div>
+            
+            <!-- Kolom 2: Klassement & Finales -->
             <div class="grid-col">
                 <div class="card" style="flex: 2.5;">
                     <h2>🏆 ALGEMEEN KLASSEMENT</h2>
@@ -225,19 +239,11 @@ function buildDashboardSkeleton() {
                     <div style="flex: 1; display:flex; flex-direction: column; justify-content: space-around;" id="tv-knockouts"></div>
                 </div>
             </div>
+            
+            <!-- Kolom 3: 3x4 Stats Grid (12 Vakken) -->
             <div class="grid-col">
                 <div class="stats-grid" id="tv-stats-grid">
                     ${[1,2,3,4,5,6,7,8,9,10,11,12].map(i => `<div class="stat-box" id="sb-${i}"></div>`).join('')}
-                </div>
-            </div>
-        </div>
-        <div class="dashboard-bottom">
-            <div class="card" style="width:100%; flex-direction: column;">
-                <h2>📋 WEDSTRIJDSCHEMA</h2>
-                <div class="poule-grid">
-                    <div class="poule-col" id="plog-1"></div>
-                    <div class="poule-col" id="plog-2"></div>
-                    <div class="poule-col" id="plog-3"></div>
                 </div>
             </div>
         </div>
@@ -280,6 +286,37 @@ function generateTVBoardHTML(title, match) {
         </div>`;
 }
 
+function updateLogboekOnly() {
+    let titleEl = document.getElementById('logboek-title');
+    let contentEl = document.getElementById('tv-logboek-content');
+    if(!contentEl) return;
+
+    titleEl.innerText = `📋 SCHEMA (P. ${logboekIndex + 1}/3)`;
+    
+    let pouleM = state.matches.filter(m => m.fase === 'poule');
+    let startIdx = logboekIndex * 7;
+    let currentM = pouleM.slice(startIdx, startIdx + 7);
+
+    contentEl.innerHTML = currentM.map(m => {
+        let p1Cls = "", p2Cls = "", label = "Wacht", itemCls = "";
+        if (m.status === 'playing') { label = `B${m.board === 'board1' ? 1 : 2}`; itemCls = "bezig"; }
+        else if (m.status === 'bullen') { label = "Bullen"; itemCls = "bullen"; }
+        else if (m.status === 'finished') { 
+            label = `${m.legs1} - ${m.legs2}`; 
+            itemCls = "klaar"; 
+            if(m.legs1 > m.legs2) p1Cls = "winner-text";
+            else if(m.legs2 > m.legs1) p2Cls = "winner-text";
+        }
+
+        return `<div class="poule-item ${itemCls}">
+            <span style="flex:1; text-align:right;" class="${p1Cls}">${m.p1}</span>
+            <span style="padding:0 8px; font-weight:normal; color:#555;">v</span>
+            <span style="flex:1; text-align:left;" class="${p2Cls}">${m.p2}</span>
+            <span style="width: 50px; text-align:right;">${label}</span>
+        </div>`;
+    }).join('');
+}
+
 function updateDashboardData() {
     const activeB1 = state.matches.find(m => m.board === 'board1' && m.status !== 'finished' && m.status !== 'waiting');
     const activeB2 = state.matches.find(m => m.board === 'board2' && m.status !== 'finished' && m.status !== 'waiting');
@@ -288,6 +325,9 @@ function updateDashboardData() {
     let b2El = document.getElementById('tv-b2');
     if(b1El) { b1El.innerHTML = generateTVBoardHTML('🎯 BORD 1', activeB1); activeB1?b1El.classList.add('active'):b1El.classList.remove('active'); }
     if(b2El) { b2El.innerHTML = generateTVBoardHTML('🎯 BORD 2', activeB2); activeB2?b2El.classList.add('active'):b2El.classList.remove('active'); }
+
+    // Update het schema venster live
+    updateLogboekOnly();
 
     // Standings met LV en LT
     let sHTML = state.standings.map((s, i) => `<tr class="${i===0?'leader-row':''}"><td>${i+1}</td><td style="text-align:left;"><b>${s.naam}</b></td><td>${s.w}</td><td>${s.v}</td><td>${s.legsV}</td><td>${s.legsT}</td><td class="punten-cel">${s.pt}</td><td>${s.saldo > 0 ? '+'+s.saldo : s.saldo}</td></tr>`).join('');
@@ -302,18 +342,14 @@ function updateDashboardData() {
 
     // 12 Stats Grid (Toon nu ALLE 7 spelers voor overal!)
     const top7 = (arr) => arr.sort((a,b) => b.val - a.val).slice(0,7); 
-    const statBox = (t, d) => `<h3>${t}</h3><table class="retro-table">${d.map((x,i)=>`<tr><td style="width:20px;">${i+1}</td><td style="text-align:left;">${x.naam}</td><td style="font-weight:bold;">${x.txt||x.val}</td></tr>`).join('')}</table>`;
+    const statBox = (t, d) => `<h3>${t}</h3><table class="retro-table">${d.map((x,i)=>`<tr><td style="width:15px;">${i+1}</td><td style="text-align:left;">${x.naam}</td><td style="font-weight:bold;text-align:right;">${x.txt||x.val}</td></tr>`).join('')}</table>`;
 
-    // Toernooi Top 7 checkouts overall
     let allCheckouts = [];
     alleSpelers.forEach(s => {
-        if(state.stats[s] && state.stats[s].checkouts) {
-            state.stats[s].checkouts.forEach(c => allCheckouts.push({naam: s, val: c}));
-        }
+        if(state.stats[s] && state.stats[s].checkouts) state.stats[s].checkouts.forEach(c => allCheckouts.push({naam: s, val: c}));
     });
     let d_hgo = top7(allCheckouts);
 
-    // Het NIEUWE blok: Totaal Pijlen & Gemiddelde Pijlen per Leg
     let d_tot = top7(alleSpelers.map(s => {
         let legs = state.stats[s]?.legsPlayed || 0;
         let darts = state.stats[s]?.totalDarts || 0;
@@ -344,13 +380,6 @@ function updateDashboardData() {
     if(document.getElementById('sb-10')) document.getElementById('sb-10').innerHTML = statBox('Max 180s', d_180);
     if(document.getElementById('sb-11')) document.getElementById('sb-11').innerHTML = statBox('Meeste Breaks', d_brk);
     if(document.getElementById('sb-12')) document.getElementById('sb-12').innerHTML = statBox('Whitewashes', d_wws);
-
-    // Schema Logboek
-    let pouleM = state.matches.filter(m => m.fase === 'poule');
-    const rLg = (arr) => arr.map(m => `<div class="poule-item ${m.status==='playing'?'bezig':(m.status==='bullen'?'bullen':'klaar')}"><span>${m.p1.substring(0,3)} v ${m.p2.substring(0,3)}</span><span>${m.status==='playing'?`B${m.board==='board1'?1:2}`:(m.status==='bullen'?'Bullen':`${m.legs1}-${m.legs2}`)}</span></div>`).join('');
-    if(document.getElementById('plog-1')) document.getElementById('plog-1').innerHTML = rLg(pouleM.slice(0, 7));
-    if(document.getElementById('plog-2')) document.getElementById('plog-2').innerHTML = rLg(pouleM.slice(7, 14));
-    if(document.getElementById('plog-3')) document.getElementById('plog-3').innerHTML = rLg(pouleM.slice(14, 21));
 }
 
 function buildTabletSkeleton(boardId) {
@@ -433,7 +462,6 @@ function updateTabletData(boardId) {
     }
 }
 
-// --- DART ENGINE CONTROLS ---
 window.numpadDrukCijfer = function(c) { if(padInputString.length >= 3) return; padInputString += c; document.getElementById('pad-screen').innerText = padInputString; };
 window.numpadWissen = function() { padInputString = padInputString.slice(0, -1); document.getElementById('pad-screen').innerText = padInputString || "0"; };
 window.numpadDrukPref = function(val) { padInputString = val.toString(); document.getElementById('pad-screen').innerText = padInputString; };

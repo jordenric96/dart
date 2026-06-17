@@ -15,7 +15,6 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
     font-family: 'Oswald', sans-serif; letter-spacing: 1px;
 }
 
-/* --- NIEUW: Duidelijker lettertype voor alle cijfers & scores --- */
 .p-score, .pane-score, .finish-score, .numpad-field, .numpad-grid button {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-variant-numeric: tabular-nums;
@@ -27,11 +26,11 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .retro-table td {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-variant-numeric: tabular-nums;
-    font-size: clamp(0.85rem, 1.7vh, 1.1rem); /* Nog een fractie groter gemaakt */
+    font-size: clamp(0.85rem, 1.7vh, 1.1rem); 
     padding: 0.3vh 0.4vw;
 }
 
-/* Navigatie */
+/* Navigatie & Lock State */
 .top-nav {
     background-color: #151518; display: flex; justify-content: space-between; align-items: center;
     padding: 1vh 2vw; border-bottom: 3px solid var(--gold); box-sizing: border-box; height: 6vh; flex-shrink: 0;
@@ -43,6 +42,8 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
     font-size: clamp(0.9rem, 1.8vh, 1.2rem); cursor: pointer; border-radius: 4px; transition: all 0.2s ease;
 }
 .nav-btn.active, .nav-btn:hover { background: var(--gold); color: #000; border-color: var(--gold); }
+.nav-btn.locked-board-btn { background-color: #2a1111; color: var(--neon-red); border-color: var(--neon-red); opacity: 0.9; }
+.nav-btn.locked-board-btn:hover { background-color: var(--neon-red); color: #fff; }
 
 #app-container { flex: 1; padding: 1.5vh 1.5vw; box-sizing: border-box; height: 94vh; display: flex; flex-direction: column; }
 

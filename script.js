@@ -166,7 +166,6 @@ function triggerOverlay(title, name, subtitle) {
     setTimeout(() => ov.classList.remove('show'), 5000);
 }
 
-// --- TABLET LOCK BEVEILIGING ---
 function updateNavButtons() {
     const b1Active = state.matches.some(m => m.board === 'board1' && m.status !== 'finished' && m.status !== 'waiting');
     const b2Active = state.matches.some(m => m.board === 'board2' && m.status !== 'finished' && m.status !== 'waiting');
@@ -194,9 +193,7 @@ function updateNavButtons() {
     });
 }
 
-// Event listener vervangen met beveiligings-check
 navButtons.forEach(btn => {
-    // Eerst opschonen (indien nodig, of gewoon direct)
     btn.onclick = (e) => {
         let targetView = e.target.getAttribute('data-view');
         
@@ -204,7 +201,7 @@ navButtons.forEach(btn => {
             const isActive = state.matches.some(m => m.board === targetView && m.status !== 'finished' && m.status !== 'waiting');
             if (isActive && localStorage.getItem('myBoard') !== targetView) {
                 if(prompt(`Dit bord is in gebruik! Typ '1403' om over te nemen (bijv. na een crash):`) !== "1403") {
-                    return; // Stop navigatie
+                    return; 
                 } else {
                     localStorage.setItem('myBoard', targetView);
                 }
@@ -324,7 +321,7 @@ function render() {
         if(!document.getElementById('tablet-wrapper')) buildTabletSkeleton(currentView);
         updateTabletData(currentView);
     }
-    updateNavButtons(); // Update knoppen (rode locks indien nodig)
+    updateNavButtons(); 
 }
 
 function buildDashboardSkeleton() {
@@ -628,11 +625,11 @@ function updateTabletData(boardId) {
 
     if (m.status === 'bullen') {
         wrap.innerHTML = `
-            <h2 style="font-size:2.5rem; color:var(--gold); text-align:center; margin-top:5vh;">🐂 BULLSEYE METING 🐂</h2>
-            <p style="font-size:1.4rem; text-align:center;">Wie smeet het dichtst bij de rode stip en mag openen?</p>
+            <h2 style="font-size: clamp(1.5rem, 5vw, 2.5rem); color:var(--gold); text-align:center; margin-top:5vh;">🐂 BULLSEYE METING 🐂</h2>
+            <p style="font-size: clamp(1rem, 3vw, 1.4rem); text-align:center;">Wie smeet het dichtst bij de rode stip en mag openen?</p>
             <div style="display:flex; justify-content:center; gap:20px; margin-top:3vh;">
-                <button class="retro-button success" style="font-size:2.5rem; padding: 20px 40px;" onclick="bevestigBullenWinnaar('${m.id}', 1)">${m.p1}</button>
-                <button class="retro-button success" style="font-size:2.5rem; padding: 20px 40px;" onclick="bevestigBullenWinnaar('${m.id}', 2)">${m.p2}</button>
+                <button class="retro-button success" style="font-size: clamp(1.5rem, 5vw, 2.5rem); padding: 20px 40px;" onclick="bevestigBullenWinnaar('${m.id}', 1)">${m.p1}</button>
+                <button class="retro-button success" style="font-size: clamp(1.5rem, 5vw, 2.5rem); padding: 20px 40px;" onclick="bevestigBullenWinnaar('${m.id}', 2)">${m.p2}</button>
             </div>
             <div style="text-align:center; margin-top:5vh;"><button class="retro-button danger" onclick="annuleerLopendeMatch('${m.id}')">Annuleer Match</button></div>`;
         return;
@@ -643,24 +640,24 @@ function updateTabletData(boardId) {
         let mAvg2 = m.matchDarts2 > 0 ? ((m.matchScore2 / m.matchDarts2) * 3).toFixed(2) : "0.00";
         
         wrap.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1vh;">
-                <span style="font-size:1.5rem; font-weight:bold; color:var(--gold);">📊 MATCH STATS (${boardId.toUpperCase()})</span>
-                <button class="retro-button danger" style="padding:4px 10px; font-size:1rem;" onclick="sluitTabletEnFinishMatch('${m.id}')">Overslaan ⏭</button>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1vh; gap: 10px;">
+                <span style="font-size: clamp(1rem, 4vw, 1.5rem); font-weight:bold; color:var(--gold); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">📊 MATCH STATS (${boardId.toUpperCase()})</span>
+                <button class="retro-button danger" style="padding:4px clamp(5px, 2vw, 10px); font-size:clamp(0.7rem, 2.5vw, 1rem); flex-shrink:0;" onclick="sluitTabletEnFinishMatch('${m.id}')">Overslaan ⏭</button>
             </div>
-            <div style="flex:1; display:flex; justify-content:center; align-items:center; background:var(--card-bg); border:3px solid var(--gold); border-radius:12px;">
+            <div style="flex:1; display:flex; justify-content:center; align-items:center; background:var(--card-bg); border:3px solid var(--gold); border-radius:12px; overflow:hidden;">
                 <div style="display:flex; justify-content:space-around; width:100%; color:#fff; text-transform:uppercase;">
                     <div style="text-align:center;">
-                        <h2 style="color:var(--gold); font-size:4rem; margin:0;">${m.p1}</h2>
-                        <div style="font-size:3rem;">LEGS: ${m.legs1}</div>
-                        <div style="font-size:2rem; margin-top:20px;">AVG: ${mAvg1}</div>
-                        <div style="font-size:1.5rem; color:#aaa;">Pijlen: ${m.matchDarts1}</div>
+                        <h2 style="color:var(--gold); font-size: clamp(2rem, 8vw, 4rem); margin:0;">${m.p1}</h2>
+                        <div style="font-size: clamp(1.5rem, 6vw, 3rem);">LEGS: ${m.legs1}</div>
+                        <div style="font-size: clamp(1rem, 4vw, 2rem); margin-top:2vh;">AVG: ${mAvg1}</div>
+                        <div style="font-size: clamp(0.8rem, 3vw, 1.5rem); color:#aaa;">Pijlen: ${m.matchDarts1}</div>
                     </div>
-                    <div style="font-size:3rem; color:#555; align-self:center;">VS</div>
+                    <div style="font-size: clamp(1.5rem, 6vw, 3rem); color:#555; align-self:center;">VS</div>
                     <div style="text-align:center;">
-                        <h2 style="color:var(--gold); font-size:4rem; margin:0;">${m.p2}</h2>
-                        <div style="font-size:3rem;">LEGS: ${m.legs2}</div>
-                        <div style="font-size:2rem; margin-top:20px;">AVG: ${mAvg2}</div>
-                        <div style="font-size:1.5rem; color:#aaa;">Pijlen: ${m.matchDarts2}</div>
+                        <h2 style="color:var(--gold); font-size: clamp(2rem, 8vw, 4rem); margin:0;">${m.p2}</h2>
+                        <div style="font-size: clamp(1.5rem, 6vw, 3rem);">LEGS: ${m.legs2}</div>
+                        <div style="font-size: clamp(1rem, 4vw, 2rem); margin-top:2vh;">AVG: ${mAvg2}</div>
+                        <div style="font-size: clamp(0.8rem, 3vw, 1.5rem); color:#aaa;">Pijlen: ${m.matchDarts2}</div>
                     </div>
                 </div>
             </div>
@@ -674,9 +671,9 @@ function updateTabletData(boardId) {
         let titleStr = m.fase === 'poule' ? 'FIRST TO 3 LEGS (BO5)' : '🔥 FIRST TO 4 LEGS (BO7)';
 
         wrap.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1vh;">
-                <span style="font-size:1.5rem; font-weight:bold; color:var(--gold);">${boardId.toUpperCase()} - ${titleStr}</span>
-                <button class="retro-button danger" style="padding:4px 10px; font-size:1rem;" onclick="annuleerLopendeMatch('${m.id}')">Afbreken</button>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1vh; gap: 10px;">
+                <span style="font-size: clamp(1rem, 4vw, 1.5rem); font-weight:bold; color:var(--gold); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${boardId.toUpperCase()} - ${titleStr}</span>
+                <button class="retro-button danger" style="padding:4px clamp(5px, 2vw, 10px); font-size:clamp(0.7rem, 2.5vw, 1rem); flex-shrink:0;" onclick="annuleerLopendeMatch('${m.id}')">Afbreken</button>
             </div>
             
             <div class="tablet-grid">

@@ -31,7 +31,7 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
     padding: 0.3vh 0.4vw;
 }
 
-/* Navigatie & Lock State */
+/* Navigatie */
 .top-nav {
     background-color: #151518; display: flex; justify-content: space-between; align-items: center;
     padding: 1vh 2vw; border-bottom: 3px solid var(--gold); box-sizing: border-box; height: 6vh; flex-shrink: 0;
@@ -132,39 +132,86 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 
 /* --- RESPONSIVE TABLET & MOBILE INTERFACE --- */
 .tablet-view { display: flex; flex-direction: column; height: 100%; width: 100%; box-sizing: border-box; }
-.match-selector { display: flex; flex-direction: column; gap: 1.5vh; overflow-y: auto; padding: 5px; }
+
+/* Wedstrijd Kiezer Grid */
+.match-selector { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; overflow-y: auto; padding: 5px; }
 .match-option { background: var(--card-bg); border: 2px solid var(--border); color: #fff; padding: clamp(1.5vh, 3vw, 2.5vh); font-size: clamp(1.2rem, 4vw, 1.8rem); font-weight: bold; text-align: center; border-radius: 8px; cursor: pointer; display: flex; justify-content: center; align-items: center; flex-direction: column;}
 .match-option.locked { border-color: #444; color: #666; background: #111; cursor: not-allowed; }
 .match-option:not(.locked):hover { border-color: var(--gold); color: var(--gold); }
 
-/* Vloeiende layout: Bovenkant (1fr) voor Panes, Onderkant (auto) voor Numpad */
+/* VLOEIENDE FLEXBOX LAY-OUT VOOR HET SCORINGS BORD */
 .tablet-grid { 
-    display: grid; 
-    grid-template-columns: 1fr 1fr; 
-    grid-template-rows: 1fr auto; 
-    gap: clamp(8px, 2vw, 15px); 
+    display: flex; 
+    flex-direction: column; /* Standaard Portret Mode */
+    gap: 10px; 
     flex: 1; 
     min-height: 0; 
 }
 
-.pane { border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: clamp(0.5vh, 2vw, 1vh); transition: all 0.3s; border: 3px solid transparent; overflow: hidden;}
-.pane.pane-active { border-color: var(--gold); box-shadow: 0 0 20px var(--gold-glow); background: #1b1e2b; transform: scale(1.02); z-index: 2;}
-.pane.pane-inactive { opacity: 0.3; filter: grayscale(80%); transform: scale(0.95); border-color: #222; background: #111; }
+.panes-wrapper {
+    display: flex;
+    flex-direction: row; /* Twee scores naast elkaar in portret */
+    gap: 10px;
+    flex: 0.8; /* Neemt 40% van het scherm in */
+    min-height: 0;
+}
 
-.pane-name { font-size: clamp(1.2rem, 5vw, 2.5rem); color: #fff; margin: 0; text-transform: uppercase; font-family: 'Oswald', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center;}
-.pane-legs { font-size: clamp(0.7rem, 2.5vw, 1.2rem); background: var(--gold); color: #000; font-weight: bold; padding: 2px clamp(8px, 3vw, 20px); border-radius: 4px; margin: 1vh 0; white-space: nowrap;}
-.pane-score { font-size: clamp(3rem, 18vw, 8rem); color: var(--text-light); margin: 0; line-height: 1; font-weight: bold; }
+.pane { 
+    flex: 1; 
+    border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1vh; transition: all 0.3s; border: 3px solid transparent; 
+    min-height: 0; overflow: hidden;
+}
+.pane.pane-active { border-color: var(--gold); box-shadow: 0 0 15px var(--gold-glow); background: #1b1e2b; transform: scale(1.02); z-index: 2;}
+.pane.pane-inactive { opacity: 0.4; filter: grayscale(80%); transform: scale(0.95); border-color: #222; background: #111; }
+
+.pane-info-wrapper { display: flex; flex-direction: column; align-items: center; width: 100%;}
+.pane-name { font-size: clamp(1.5rem, 5vw, 2.5rem); color: #fff; margin: 0; text-transform: uppercase; font-family: 'Oswald', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; width: 100%;}
+.pane-legs { font-size: clamp(0.8rem, 3vw, 1.2rem); background: var(--gold); color: #000; font-weight: bold; padding: 4px 15px; border-radius: 4px; margin: 1vh 0; white-space: nowrap;}
+.pane-score { font-size: clamp(3.5rem, 15vw, 8rem); color: var(--text-light); margin: 0; line-height: 1; font-weight: bold; }
 .pane-score.checkout-ready { color: var(--gold); }
 .pane-stats { font-size: clamp(0.7rem, 2.5vw, 1rem); color: #888; margin-top: 1vh; white-space: nowrap;}
 
-.numpad-container { grid-column: 1 / -1; display: flex; flex-direction: column; gap: clamp(5px, 1.5vh, 10px); background-color: #111216; padding: clamp(5px, 1.5vh, 10px); border-radius: 8px; border: 1px solid #333; }
-.numpad-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(5px, 1.5vw, 10px); }
-.numpad-grid button { font-size: clamp(1.2rem, 6vw, 2.5rem); background: #252833; color: #fff; border: 2px solid #444; border-radius: 8px; cursor: pointer; font-weight: bold; padding: clamp(1.5vh, 3vh, 2.5vh) 0; }
+.numpad-container { 
+    flex: 1.2; /* Numpad neemt 60% in */
+    display: flex; flex-direction: column; gap: 8px; background-color: #111216; padding: 8px; border-radius: 8px; border: 1px solid #333; 
+    min-height: 0;
+}
+.numpad-grid { 
+    display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 8px; flex: 1; min-height: 0; 
+}
+.numpad-grid button { 
+    font-size: clamp(1.5rem, 6vw, 2.5rem); background: #252833; color: #fff; border: 2px solid #444; border-radius: 8px; cursor: pointer; font-weight: bold; 
+    padding: 0; display: flex; align-items: center; justify-content: center; /* Knoppen stretchen nu perfect! */
+}
 .numpad-grid button:active { background: #555; border-color: #fff; }
 .numpad-grid button.pre { background: #343a40; color: var(--gold); border-color: #555; }
 .numpad-grid button.action { background: var(--neon-green); color: #000; border-color: var(--neon-green); }
 .numpad-grid button.clear { background: var(--neon-red); color: #fff; border-color: var(--neon-red); }
-.numpad-field { background: #000; border: 3px solid var(--border); border-radius: 8px; color: var(--gold); font-size: clamp(2rem, 8vw, 4.5rem); font-weight: bold; display: flex; align-items: center; justify-content: center; height: clamp(45px, 8vh, 80px); }
+
+.numpad-field { 
+    height: clamp(40px, 8vh, 70px); flex-shrink: 0; background: #000; border: 3px solid var(--border); border-radius: 8px; color: var(--gold); font-size: clamp(2rem, 8vw, 4.5rem); font-weight: bold; display: flex; align-items: center; justify-content: center; 
+}
+
+/* MOBIEL LANDSCAPE MODUS (Perfect voor gsm liggend) */
+@media (orientation: landscape) and (max-height: 600px) {
+    .top-nav { height: auto; padding: 5px 2vw; }
+    .nav-title { font-size: 1rem; }
+    .nav-btn { font-size: 0.8rem; padding: 3px 10px; }
+    .tablet-view > div:first-child { margin-bottom: 5px !important; } /* Compacte header */
+
+    /* Zet scoreborden LINKS en Numpad RECHTS */
+    .tablet-grid { flex-direction: row; }
+    .panes-wrapper { flex-direction: column; flex: 1; }
+    .numpad-container { flex: 1; }
+    
+    /* Layout in de scoreborden van boven/onder naar links/rechts */
+    .pane { flex-direction: row; justify-content: space-between; align-items: center; padding: 5px 15px; }
+    .pane-info-wrapper { align-items: flex-start; width: auto; }
+    .pane-name { font-size: 1.3rem; text-align: left; }
+    .pane-score { font-size: 3.5rem; }
+    .pane-legs { font-size: 0.8rem; margin: 2px 0; padding: 2px 8px;}
+    .pane-stats { margin-top: 0; font-size: 0.75rem; }
+}
 
 /* Modals */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.9); z-index: 9999; display: flex; justify-content: center; align-items: center; }

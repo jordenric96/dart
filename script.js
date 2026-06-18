@@ -595,7 +595,7 @@ function updateDashboardData() {
 }
 
 function buildTabletSkeleton(boardId) {
-    appContainer.innerHTML = `<div id="tablet-wrapper" style="height:100%; width:100%; display:flex; flex-direction:column;"></div>`;
+    appContainer.innerHTML = `<div id="tablet-wrapper" style="height:100%; width:100%; display:flex; flex-direction:column; min-height:0;"></div>`;
 }
 
 function updateTabletData(boardId) {
@@ -677,18 +677,24 @@ function updateTabletData(boardId) {
             </div>
             
             <div class="tablet-grid">
-                <div class="pane ${m.turn===1?'pane-active':'pane-inactive'}">
-                    <h3 class="pane-name">${m.p1}</h3>
-                    <div class="pane-legs">LEGS: ${m.legs1} | PIJLEN: ${m.dartsLeg1}</div>
-                    <div class="pane-score ${m.score1<=170?'checkout-ready':''}">${m.score1}</div>
-                    <div class="pane-stats">Match Avg: ${avg1}</div>
-                </div>
-                
-                <div class="pane ${m.turn===2?'pane-active':'pane-inactive'}">
-                    <h3 class="pane-name">${m.p2}</h3>
-                    <div class="pane-legs">LEGS: ${m.legs2} | PIJLEN: ${m.dartsLeg2}</div>
-                    <div class="pane-score ${m.score2<=170?'checkout-ready':''}">${m.score2}</div>
-                    <div class="pane-stats">Match Avg: ${avg2}</div>
+                <div class="panes-wrapper">
+                    <div class="pane ${m.turn===1?'pane-active':'pane-inactive'}">
+                        <div class="pane-info-wrapper">
+                            <h3 class="pane-name">${m.p1}</h3>
+                            <div class="pane-legs">LEGS: ${m.legs1} | PIJLEN: ${m.dartsLeg1}</div>
+                            <div class="pane-stats">Match Avg: ${avg1}</div>
+                        </div>
+                        <div class="pane-score ${m.score1<=170?'checkout-ready':''}">${m.score1}</div>
+                    </div>
+                    
+                    <div class="pane ${m.turn===2?'pane-active':'pane-inactive'}">
+                        <div class="pane-info-wrapper">
+                            <h3 class="pane-name">${m.p2}</h3>
+                            <div class="pane-legs">LEGS: ${m.legs2} | PIJLEN: ${m.dartsLeg2}</div>
+                            <div class="pane-stats">Match Avg: ${avg2}</div>
+                        </div>
+                        <div class="pane-score ${m.score2<=170?'checkout-ready':''}">${m.score2}</div>
+                    </div>
                 </div>
 
                 <div class="numpad-container">

@@ -583,14 +583,23 @@ function updateDashboardData() {
         }).filter(x => x.val > 0));
 
         let currentTourneyTime = state.tournamentStartTime ? (Date.now() - state.tournamentStartTime) : 0;
-        let d_tourneyDur = [{ naam: "Actieve Duur", val: currentTourneyTime, txt: `<span class="live-timer-tourney" data-start="${state.tournamentStartTime}">${formatTimeLong(currentTourneyTime)}</span>` }];
+
+        // NIEUW: Grote custom Toernooi Klok block layout!
+        let tourneyHTML = `
+            <h3>Toernooi Klok</h3>
+            <div style="flex:1; display:flex; align-items:center; justify-content:center;">
+                <div class="live-timer-tourney" data-start="${state.tournamentStartTime}" style="color: var(--gold); font-size: clamp(2.5rem, 5vw, 4rem); font-weight: bold; text-shadow: 0 0 15px var(--gold-glow); font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-variant-numeric: tabular-nums; line-height: 1;">
+                    ${formatTimeLong(currentTourneyTime)}
+                </div>
+            </div>
+        `;
 
         if(document.getElementById('sb-1')) document.getElementById('sb-1').innerHTML = statBox('Snelste Leg (Tijd)', d_fastLeg);
         if(document.getElementById('sb-2')) document.getElementById('sb-2').innerHTML = statBox('Langste Leg (Tijd)', d_slowLeg);
         if(document.getElementById('sb-3')) document.getElementById('sb-3').innerHTML = statBox('Kortste Match', d_fastMatch);
         if(document.getElementById('sb-4')) document.getElementById('sb-4').innerHTML = statBox('Langste Match', d_slowMatch);
         if(document.getElementById('sb-5')) document.getElementById('sb-5').innerHTML = statBox('Gem. Match Duur', d_avgMatchDur);
-        if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = statBox('Toernooi Klok', d_tourneyDur);
+        if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = tourneyHTML; // Custom HTML injectie
     }
 }
 

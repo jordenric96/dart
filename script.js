@@ -584,7 +584,6 @@ function updateDashboardData() {
 
         let currentTourneyTime = state.tournamentStartTime ? (Date.now() - state.tournamentStartTime) : 0;
 
-        // NIEUW: Grote custom Toernooi Klok block layout!
         let tourneyHTML = `
             <h3>Toernooi Klok</h3>
             <div style="flex:1; display:flex; align-items:center; justify-content:center;">
@@ -599,7 +598,7 @@ function updateDashboardData() {
         if(document.getElementById('sb-3')) document.getElementById('sb-3').innerHTML = statBox('Kortste Match', d_fastMatch);
         if(document.getElementById('sb-4')) document.getElementById('sb-4').innerHTML = statBox('Langste Match', d_slowMatch);
         if(document.getElementById('sb-5')) document.getElementById('sb-5').innerHTML = statBox('Gem. Match Duur', d_avgMatchDur);
-        if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = tourneyHTML; // Custom HTML injectie
+        if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = tourneyHTML; 
     }
 }
 
@@ -822,8 +821,10 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
 
     let overlayQueue = [];
 
+    // OPLOSSING BUG: HighScores en TonPlus updaten bij IEDERE geldige score
     if (score >= 100) {
         state.stats[aP].highScores.push(score);
+        state.stats[aP].tonPlus++;
     }
 
     if (score > state.records.highestScore) {
@@ -837,6 +838,7 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
         state.stats[aP].first9Score += (score * (maxC/3)); 
     }
 
+    // Bij een BUST tellen de gegooide pijlen mee, maar we stoppen hier
     if (calcScore < 0 || calcScore === 1) {
         state.stats[aP].totalDarts += 3;
         m[dtLegStr] += 3; m['matchDarts' + m.turn] += 3;

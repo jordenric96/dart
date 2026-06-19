@@ -57,6 +57,54 @@ function formatTimeLong(ms) {
     return `${h > 0 ? (h + ':') : ''}${m < 10 ? '0':''}${m}:${s < 10 ? '0':''}${s}`;
 }
 
+// --- NIEUW: DYNAMISCHE RECORD EXTRACTOR DIE DATA HERSTELT ---
+window.getAbsoluteRecords = function() {
+    let r = {
+        hs: { speler: '-', val: 0 },
+        hf: { speler: '-', val: 0 },
+        sl: { speler: '-', val: 999 },
+        tma: { speler: '-', val: 0 },
+        flt: { speler: '-', val: 99999999 },
+        fmt: { speler: '-', val: 99999999 }
+    };
+
+    alleSpelers.forEach(s => {
+        let st = state.stats[s];
+        if (!st) return;
+        
+        let p_hs = st.highestScore || 0;
+        if (st.highScores && st.highScores.length > 0) p_hs = Math.max(p_hs, ...st.highScores);
+        if (p_hs > r.hs.val) r.hs = { speler: s, val: p_hs };
+
+        let p_hf = st.checkouts && st.checkouts.length > 0 ? Math.max(...st.checkouts) : 0;
+        if (p_hf > r.hf.val) r.hf = { speler: s, val: p_hf };
+
+        if (st.shortestLeg && st.shortestLeg.darts < r.sl.val && st.shortestLeg.darts > 0) {
+            r.sl = { speler: s, val: st.shortestLeg.darts };
+        }
+
+        let p_tma = st.matchAvgs && st.matchAvgs.length > 0 ? Math.max(...st.matchAvgs) : 0;
+        if (p_tma > r.tma.val) r.tma = { speler: s, val: p_tma };
+    });
+
+    if (state.completedLegs && state.completedLegs.length > 0) {
+        let validLegs = state.completedLegs.filter(l => l.time > 3000);
+        if (validLegs.length > 0) {
+            let bestL = validLegs.reduce((p, c) => (c.time < p.time ? c : p));
+            r.flt = { speler: bestL.winner, val: bestL.time };
+        }
+    }
+    
+    if (state.completedMatches && state.completedMatches.length > 0) {
+        let validMatches = state.completedMatches.filter(m => m.time > 5000);
+        if (validMatches.length > 0) {
+            let bestM = validMatches.reduce((p, c) => (c.time < p.time ? c : p));
+            r.fmt = { speler: bestM.winner, val: bestM.time };
+        }
+    }
+    return r;
+}
+
 async function init() {
     try {
         const { data, error } = await supabaseClient.from('toernooi_data').select('state').eq('id', 1).single();
@@ -501,6 +549,7 @@ function updateDashboardData() {
         let winnerNaam = finMatch.legs1 > finMatch.legs2 ? finMatch.p1 : finMatch.p2;
         let b1El = document.getElementById('tv-b1');
         let b2El = document.getElementById('tv-b2');
+        let absRec = getAbsoluteRecords();
         
         if (b1El) {
             b1El.innerHTML = `
@@ -516,13 +565,13 @@ function updateDashboardData() {
             b2El.innerHTML = `
                 <div style="flex:1; display:flex; flex-direction:column; padding:15px; background:var(--bg-dim); border: 2px solid #333; border-radius: 12px; justify-content: space-around;">
                     <h3 style="color:var(--gold); font-size:1.3rem; margin:0 0 5px 0; text-transform:uppercase; text-align:center; border-bottom:2px solid var(--border); padding-bottom:5px; font-family:'Oswald', sans-serif;">👑 TOERNOOI RECORDHOUDERS 👑</h3>
-                    <table class="retro-table" style="font-size:1rem; width:100%;">
-                        <tr><td style="text-align:left;color:var(--border);padding:4px 0;">Hoogste Score</td><td style="text-align:right;font-weight:bold;color:#fff;">${state.records.highestScore.speler} (${state.records.highestScore.val})</td></tr>
-                        <tr><td style="text-align:left;color:var(--border);padding:4px 0;">Hoogste Finish</td><td style="text-align:right;font-weight:bold;color:#fff;">${state.records.highestCheckout.speler} (${state.records.highestCheckout.val})</td></tr>
-                        <tr><td style="text-align:left;color:var(--border);padding:4px 0;">Kortste Leg (Pijlen)</td><td style="text-align:right;font-weight:bold;color:#fff;">${state.records.shortestLeg.speler} (${state.records.shortestLeg.val})</td></tr>
-                        <tr><td style="text-align:left;color:var(--border);padding:4px 0;">Top Match Avg</td><td style="text-align:right;font-weight:bold;color:#fff;">${state.records.highestMatchAvg.speler} (${state.records.highestMatchAvg.val.toFixed(2)})</td></tr>
-                        <tr><td style="text-align:left;color:var(--border);padding:4px 0;">Snelste Leg (Tijd)</td><td style="text-align:right;font-weight:bold;color:#fff;">${state.records.fastestLegTime.speler} (${formatTime(state.records.fastestLegTime.val)})</td></tr>
-                        <tr><td style="text-align:left;color:var(--border);padding:4px 0;">Kortste Match (Tijd)</td><td style="text-align:right;font-weight:bold;color:#fff;">${state.records.fastestMatchTime.speler} (${formatTime(state.records.fastestMatchTime.val)})</td></tr>
+                    <table class="retro-table" style="font-size:clamp(0.85rem, 1.5vh, 1.1rem); width:100%;">
+                        <tr><td style="text-align:left;color:var(--border);padding:4px 0;white-space:normal;">Hoogste Score</td><td style="text-align:right;font-weight:bold;color:#fff;">${absRec.hs.speler} (${absRec.hs.val})</td></tr>
+                        <tr><td style="text-align:left;color:var(--border);padding:4px 0;white-space:normal;">Hoogste Finish</td><td style="text-align:right;font-weight:bold;color:#fff;">${absRec.hf.speler} (${absRec.hf.val})</td></tr>
+                        <tr><td style="text-align:left;color:var(--border);padding:4px 0;white-space:normal;">Kortste Leg (Pijlen)</td><td style="text-align:right;font-weight:bold;color:#fff;">${absRec.sl.speler} (${absRec.sl.val === 999 ? '-' : absRec.sl.val})</td></tr>
+                        <tr><td style="text-align:left;color:var(--border);padding:4px 0;white-space:normal;">Top Match Avg</td><td style="text-align:right;font-weight:bold;color:#fff;">${absRec.tma.speler} (${absRec.tma.val.toFixed(2)})</td></tr>
+                        <tr><td style="text-align:left;color:var(--border);padding:4px 0;white-space:normal;">Snelste Leg (Tijd)</td><td style="text-align:right;font-weight:bold;color:#fff;">${absRec.flt.speler} (${absRec.flt.val === 99999999 ? '-' : formatTime(absRec.flt.val)})</td></tr>
+                        <tr><td style="text-align:left;color:var(--border);padding:4px 0;white-space:normal;">Kortste Match (Tijd)</td><td style="text-align:right;font-weight:bold;color:#fff;">${absRec.fmt.speler} (${absRec.fmt.val === 99999999 ? '-' : formatTime(absRec.fmt.val)})</td></tr>
                     </table>
                 </div>
             `;
@@ -1131,6 +1180,7 @@ window.openRekeningModal = function() {
 }
 
 window.openExportModal = function() {
+    let absRec = getAbsoluteRecords();
     let text = "🏆 OG'S PRO DARTS 2026 - TOERNOOI STATS 🏆\n\n";
     
     text += "--- ALGEMEEN KLASSEMENT ---\n";
@@ -1145,6 +1195,7 @@ window.openExportModal = function() {
         let dbl = st.doubleAttempts > 0 ? ((st.doubleHits / st.doubleAttempts) * 100).toFixed(2) : "0.00";
         let hf = st.checkouts.length > 0 ? Math.max(...st.checkouts) : 0;
         let hs = st.highestScore || 0;
+        if (st.highScores && st.highScores.length > 0) hs = Math.max(hs, ...st.highScores);
         let avgL = st.legsPlayed > 0 ? (st.totalDarts / st.legsPlayed).toFixed(2) : "0.00";
         let sl = st.shortestLeg && st.shortestLeg.darts !== 999 ? st.shortestLeg.darts : "-";
         let mva = st.matchAvgs.length > 0 ? Math.max(...st.matchAvgs).toFixed(2) : "0.00";
@@ -1172,11 +1223,11 @@ window.openExportModal = function() {
     text += "\n--- TOERNOOI RECORDS ---\n";
     let curTime = state.tournamentStartTime ? (Date.now() - state.tournamentStartTime) : 0;
     text += `- Actieve Toernooi Duur: ${formatTimeLong(curTime)}\n`;
-    text += `- Hoogste Checkout: ${state.records.highestCheckout.speler} (${state.records.highestCheckout.val})\n`;
-    text += `- Hoogste Score: ${state.records.highestScore.speler} (${state.records.highestScore.val})\n`;
-    text += `- Top Match Avg: ${state.records.highestMatchAvg.speler} (${state.records.highestMatchAvg.val.toFixed(2)})\n`;
-    if (state.records.fastestLegTime.val !== 99999999) text += `- Snelste Leg (Tijd): ${state.records.fastestLegTime.speler} (${formatTime(state.records.fastestLegTime.val)})\n`;
-    if (state.records.fastestMatchTime.val !== 99999999) text += `- Kortste Match (Tijd): ${state.records.fastestMatchTime.speler} (${formatTime(state.records.fastestMatchTime.val)})\n`;
+    text += `- Hoogste Checkout: ${absRec.hf.speler} (${absRec.hf.val})\n`;
+    text += `- Hoogste Score: ${absRec.hs.speler} (${absRec.hs.val})\n`;
+    text += `- Top Match Avg: ${absRec.tma.speler} (${absRec.tma.val.toFixed(2)})\n`;
+    if (absRec.flt.val !== 99999999) text += `- Snelste Leg (Tijd): ${absRec.flt.speler} (${formatTime(absRec.flt.val)})\n`;
+    if (absRec.fmt.val !== 99999999) text += `- Kortste Match (Tijd): ${absRec.fmt.speler} (${formatTime(absRec.fmt.val)})\n`;
 
     showModal(`
         <h2 style="font-size: 2rem;">📋 TOERNOOI EXPORT</h2>

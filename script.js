@@ -23,8 +23,16 @@ if (!document.getElementById('finish-overlay')) {
     document.body.appendChild(ov);
 }
 
+// --- KNOPPEN TOEVOEGEN ---
 const navContainer = document.querySelector('.nav-buttons');
 if (navContainer && !document.getElementById('export-btn')) {
+    let rekBtn = document.createElement('button');
+    rekBtn.id = 'rekening-btn';
+    rekBtn.className = 'nav-btn';
+    rekBtn.innerText = '💶 REKENING';
+    rekBtn.onclick = () => openRekeningModal();
+    navContainer.appendChild(rekBtn);
+
     let exportBtn = document.createElement('button');
     exportBtn.id = 'export-btn';
     exportBtn.className = 'nav-btn';
@@ -57,7 +65,6 @@ async function init() {
             state = data.state;
             if (state.lastOverlay) windowLastOverlayTime = state.lastOverlay.time;
             
-            // Database Record structuur migratie naar Objecten (om namen op te slaan)
             if (!state.records || Array.isArray(state.records) || !state.records.highestCheckout || typeof state.records.highestCheckout !== 'object') {
                 state.records = {
                     highestCheckout: { val: 0, speler: '-' },
@@ -490,7 +497,6 @@ function updateDashboardData() {
     const finMatch = state.matches.find(m => m.id === 'FIN');
     const isTourneyOver = finMatch && (finMatch.status === 'finished' || finMatch.status === 'post_match');
 
-    // EXCLUSIEF NA HET TOERNOOI: Hall of Fame en Winnaar presentatie!
     if (isTourneyOver) {
         let winnerNaam = finMatch.legs1 > finMatch.legs2 ? finMatch.p1 : finMatch.p2;
         let b1El = document.getElementById('tv-b1');
@@ -501,7 +507,7 @@ function updateDashboardData() {
                 <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:15px; background: linear-gradient(135deg, #1a1510 0%, #0b0c10 100%); border: 3px solid var(--gold); border-radius: 12px; box-shadow: 0 0 25px var(--gold-glow);">
                     <h3 style="color:var(--gold); font-size:2.2rem; margin:0; text-transform:uppercase; text-shadow:0 0 10px var(--gold-glow); font-family:'Oswald', sans-serif;">🏆 PROFICIAT 🏆</h3>
                     <div style="color:#fff; font-size:4.5rem; font-weight:bold; font-family:'Oswald', sans-serif; text-transform:uppercase; margin:20px 0; text-shadow: 0 0 30px var(--gold); text-align:center; line-height:1.1;">${winnerNaam}</div>
-                    <div style="color:var(--border); font-size:1.4rem; letter-spacing:2px; font-weight:bold; text-align:center;">KAMPION VAN HET TOERNOOI</div>
+                    <div style="color:var(--border); font-size:1.4rem; letter-spacing:2px; font-weight:bold; text-align:center;">KAMPIOEN VAN HET TOERNOOI</div>
                 </div>
             `;
             b1El.classList.add('active');
@@ -677,7 +683,13 @@ function updateTabletData(boardId) {
 
     if (!m) {
         let html = `
-            <div class="top-nav" style="margin-bottom:2vh; border-radius:4px;"><div class="nav-title">KIES EEN WEDSTRIJD (${boardId.toUpperCase()})</div><button class="nav-btn active" onclick="sluitTablet()">🗙 TV</button></div>
+            <div class="top-nav" style="margin-bottom:2vh; border-radius:4px;">
+                <div class="nav-title">KIES EEN WEDSTRIJD (${boardId.toUpperCase()})</div>
+                <div style="display:flex; gap:1vw;">
+                    <button class="nav-btn" onclick="openRekeningModal()" style="background:#2a2a35; border-color:#444;">💶 REKENING</button>
+                    <button class="nav-btn active" onclick="sluitTablet()">🗙 TV</button>
+                </div>
+            </div>
             <div class="match-selector">`;
             
         state.matches.filter(x => x.status === 'waiting' && !x.p1.includes('Plaats') && !x.p1.includes('Winnaar')).forEach(x => {
@@ -697,7 +709,7 @@ function updateTabletData(boardId) {
     if (m.status === 'bullen') {
         wrap.innerHTML = `
             <h2 style="font-size: clamp(1.5rem, 5vw, 2.5rem); color:var(--gold); text-align:center; margin-top:5vh;">🐂 BULLSEYE METING 🐂</h2>
-            <p style="font-size: clamp(1rem, 3vw, 1.4rem); text-align:center;">Wie smeet het dichtst bij de rode stip Nic en mag openen?</p>
+            <p style="font-size: clamp(1rem, 3vw, 1.4rem); text-align:center;">Wie smeet het dichtst bij de rode stip en mag openen?</p>
             <div style="display:flex; justify-content:center; gap:20px; margin-top:3vh;">
                 <button class="retro-button success" style="font-size: clamp(1.5rem, 5vw, 2.5rem); padding: 20px 40px;" onclick="bevestigBullenWinnaar('${m.id}', 1)">${m.p1}</button>
                 <button class="retro-button success" style="font-size: clamp(1.5rem, 5vw, 2.5rem); padding: 20px 40px;" onclick="bevestigBullenWinnaar('${m.id}', 2)">${m.p2}</button>
@@ -849,7 +861,6 @@ window.verwerkIngevuldeScore = async function(mId) {
     if (oldScore <= 170 && newScore <= 50) {
         let isHit = (newScore === 0);
         
-        // UPGRADE: Geavanceerd Checkout Darts Tracking raster!
         if (isHit) {
             showModal(`
                 <h2>🎯 GEWELDIGE CHECKOUT!</h2>
@@ -1052,6 +1063,72 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
 
 function showModal(h) { document.getElementById('modal-content').innerHTML = h; document.getElementById('action-modal').style.display = 'flex'; }
 function hideModal() { document.getElementById('action-modal').style.display = 'none'; }
+
+// --- REKENING MODAL ---
+window.openRekeningModal = function() {
+    const drankDeel = (101 / 7).toFixed(2);
+    const data = [
+        { naam: "Stefaan (Gezin)", f: 35.60, s: true },
+        { naam: "Joël", f: 9.40, s: true },
+        { naam: "Wim & Nancy", f: 17.10, s: true },
+        { naam: "Yarni", f: 14.60, s: true },
+        { naam: "Jessy (Dana)", f: 21.40, s: false },
+        { naam: "Vince", f: 15.90, s: true },
+        { naam: "Tibe", f: 13.50, s: true },
+        { naam: "Jorden", f: 15.90, s: true }
+    ];
+
+    let html = `
+        <h2 style="font-size: clamp(1.5rem, 4vw, 2.5rem); color:var(--gold); margin-top:0;">💶 DE REKENING</h2>
+        <p style="color:#aaa; font-size:1rem; margin-bottom:15px;">Frituur + €101 drank gedeeld door de 7 spelers (€${drankDeel} p.p.)</p>
+        <div style="overflow-x:auto;">
+        <table class="retro-table" style="width:100%; font-size:1.1rem; text-align:right;">
+            <thead>
+                <tr>
+                    <th style="text-align:left;">Naam / Gezin</th>
+                    <th>Frituur</th>
+                    <th>Drank</th>
+                    <th style="color:var(--gold);">Totaal</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    let totFrituur = 0;
+    let totDrank = 0;
+    
+    data.forEach(d => {
+        let drank = d.s ? 101/7 : 0;
+        let rowTot = d.f + drank;
+        totFrituur += d.f;
+        totDrank += drank;
+        
+        html += `
+            <tr>
+                <td style="text-align:left; color:#fff;">${d.naam}</td>
+                <td>€ ${d.f.toFixed(2)}</td>
+                <td>€ ${drank.toFixed(2)}</td>
+                <td style="color:var(--gold); font-weight:bold;">€ ${rowTot.toFixed(2)}</td>
+            </tr>
+        `;
+    });
+
+    html += `
+            <tr style="background: rgba(255,183,3,0.1); border-top: 2px solid var(--gold);">
+                <td style="text-align:left; color:var(--gold); font-weight:bold;">TOTAAL</td>
+                <td style="font-weight:bold;">€ ${totFrituur.toFixed(2)}</td>
+                <td style="font-weight:bold;">€ ${totDrank.toFixed(2)}</td>
+                <td style="color:var(--gold); font-weight:bold; font-size:1.3rem;">€ ${(totFrituur + totDrank).toFixed(2)}</td>
+            </tr>
+            </tbody>
+        </table>
+        </div>
+        <div class="modal-grid-3" style="display:flex; justify-content:center; margin-top:2vh;">
+            <button class="retro-button danger" onclick="hideModal()">Sluiten</button>
+        </div>
+    `;
+    showModal(html);
+}
 
 window.openExportModal = function() {
     let text = "🏆 OG'S PRO DARTS 2026 - TOERNOOI STATS 🏆\n\n";

@@ -31,7 +31,7 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
     padding: 0.3vh 0.4vw;
 }
 
-/* Navigatie */
+/* Navigatie & Lock State */
 .top-nav {
     background-color: #151518; display: flex; justify-content: space-between; align-items: center;
     padding: 1vh 2vw; border-bottom: 3px solid var(--gold); box-sizing: border-box; height: 6vh; flex-shrink: 0;
@@ -69,6 +69,7 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .gold-card { border-color: var(--gold); background: #1a1510; }
 .gold-card h2 { color: var(--gold); border-bottom-color: var(--gold); }
 
+/* --- SUBTIELE AFTELBALK & 2x3 STATS GRID --- */
 .stats-progress-container { width: 100%; height: 5px; background: #111; border-radius: 3px; margin-bottom: 0.5vh; overflow: hidden; border: 1px solid #222; flex-shrink: 0;}
 .stats-progress-fill { height: 100%; background: linear-gradient(90deg, var(--border), var(--gold)); width: 0%; transition: width 0.1s linear; }
 
@@ -76,7 +77,7 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .stat-box { background: var(--bg-dim); border: 1px solid #333; border-radius: 6px; padding: 1vh 1vw; display: flex; flex-direction: column; overflow: hidden; justify-content: center;}
 .stat-box h3 { font-size: clamp(0.9rem, 1.8vh, 1.1rem); color: var(--border); margin: 0 0 0.5vh 0; text-align: center; text-transform: uppercase; border-bottom: 1px dashed #333; padding-bottom: 4px;}
 
-/* Live Score Wedstrijdblokken TV */
+/* Live Score Wedstrijdblokken */
 .live-board {
     background: linear-gradient(135deg, #1f2833 0%, #151a22 100%); border: 2px solid var(--border); border-radius: 8px; padding: 1vh 1vw; text-align: center; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: space-between; flex: 1.2;
 }
@@ -89,9 +90,9 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .player-col.turn-active .p-name { color: #fff; text-shadow: 0 0 8px var(--gold); font-weight: bold; }
 .player-col.turn-active .p-score { color: var(--gold); text-shadow: 0 0 15px var(--gold-glow); }
 
-/* BEIDE SPELERS OP TV ALTIJD ORANJE EN HELDER */
-.player-col.turn-inactive { opacity: 0.85; transform: scale(0.95); } 
-.player-col.turn-inactive .p-name { color: #fff; text-shadow: 0 0 4px rgba(255, 183, 3, 0.4); font-weight: bold;}
+/* BORD TV SPELERS BLIJVEN ALTIJD ORANJE */
+.player-col.turn-inactive { opacity: 0.85; transform: scale(0.95); }
+.player-col.turn-inactive .p-name { color: #fff; text-shadow: 0 0 4px rgba(255, 183, 3, 0.4); font-weight: bold; }
 .player-col.turn-inactive .p-score { color: var(--gold); text-shadow: 0 0 5px rgba(255, 183, 3, 0.3); }
 
 .p-name { font-size: 1.2rem; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; transition: color 0.3s; font-family: 'Oswald', sans-serif;}
@@ -113,7 +114,7 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .knockout-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #333; padding: 0.8vh 0; font-size: clamp(0.8rem, 1.6vh, 1rem); }
 .knockout-title { font-size: 0.8em; width: 80px; font-weight: bold; text-transform: uppercase;}
 
-/* Roterend Wedstrijdschema */
+/* Roterend Wedstrijdschema Linksonder */
 .poule-item { font-size: clamp(0.7rem, 1.5vh, 0.95rem); display: flex; align-items: center; border-bottom: 1px solid #222; padding: 0.3vh 0; width: 100%;}
 .poule-item.bezig { color: var(--neon-green); font-weight: bold; }
 .poule-item.bullen { color: var(--gold); font-weight: bold; }
@@ -161,7 +162,7 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
     min-height: 0; overflow: hidden;
 }
 .pane.pane-active { border-color: var(--gold); box-shadow: 0 0 20px var(--gold-glow); background: #1b1e2b; transform: scale(1.02); z-index: 2;}
-.pane.pane-inactive { opacity: 0.3; filter: grayscale(80%); transform: scale(0.95); border-color: #222; background: #111; }
+.pane.pane-inactive { opacity: 0.4; filter: grayscale(80%); transform: scale(0.95); border-color: #222; background: #111; }
 
 .pane-info-wrapper { display: flex; flex-direction: column; align-items: center; width: 100%;}
 .pane-name { font-size: clamp(2rem, 6vw, 4rem); color: #fff; margin: 0; text-transform: uppercase; font-family: 'Oswald', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center;}
@@ -191,19 +192,17 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
     height: clamp(50px, 10vh, 90px); flex-shrink: 0; background: #000; border: 3px solid var(--border); border-radius: 8px; color: var(--gold); font-size: clamp(2.5rem, 8vw, 5rem); font-weight: bold; display: flex; align-items: center; justify-content: center; 
 }
 
-/* MOBIEL & TABLET LANDSCAPE MODUS (Perfect in verhouding!) */
+/* MOBIEL & TABLET LANDSCAPE MODUS */
 @media (orientation: landscape) {
     .top-nav { height: auto; padding: 5px 2vw; }
     .nav-title { font-size: 1rem; }
     .nav-btn { font-size: 0.8rem; padding: 3px 10px; }
     .tablet-view > div:first-child { margin-bottom: 5px !important; } 
 
-    /* Zet scoreborden LINKS en Numpad RECHTS */
     .tablet-grid { flex-direction: row; }
     .panes-wrapper { flex-direction: column; flex: 1.2; }
     .numpad-container { flex: 1; }
     
-    /* Layout in de scoreborden super groot */
     .pane { flex-direction: row; justify-content: space-between; align-items: center; padding: 10px 20px; }
     .pane-info-wrapper { align-items: flex-start; width: auto; flex: 1;}
     .pane-name { font-size: clamp(1.8rem, 4vw, 3.5rem); text-align: left; }

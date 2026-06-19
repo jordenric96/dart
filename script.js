@@ -23,6 +23,16 @@ if (!document.getElementById('finish-overlay')) {
     document.body.appendChild(ov);
 }
 
+const navContainer = document.querySelector('.nav-buttons');
+if (navContainer && !document.getElementById('export-btn')) {
+    let exportBtn = document.createElement('button');
+    exportBtn.id = 'export-btn';
+    exportBtn.className = 'nav-btn';
+    exportBtn.innerText = '📋 EXPORT';
+    exportBtn.onclick = () => openExportModal();
+    navContainer.appendChild(exportBtn);
+}
+
 function formatTime(ms) {
     if (!ms || ms < 0) return "00:00";
     let totalSeconds = Math.floor(ms / 1000);
@@ -47,10 +57,20 @@ async function init() {
             state = data.state;
             if (state.lastOverlay) windowLastOverlayTime = state.lastOverlay.time;
             
-            if (!state.records) state.records = { highestCheckout: 0, shortestLeg: 999, highestMatchAvg: 0, highestScore: 0, fastestLegTime: 99999999, fastestMatchTime: 99999999 };
-            if (state.records.highestScore === undefined) state.records.highestScore = 0;
-            if (state.records.fastestLegTime === undefined) state.records.fastestLegTime = 99999999;
-            if (state.records.fastestMatchTime === undefined) state.records.fastestMatchTime = 99999999;
+            // Database Record structuur migratie naar Objecten (om namen op te slaan)
+            if (!state.records || Array.isArray(state.records) || !state.records.highestCheckout || typeof state.records.highestCheckout !== 'object') {
+                state.records = {
+                    highestCheckout: { val: 0, speler: '-' },
+                    shortestLeg: { val: 999, speler: '-' },
+                    highestMatchAvg: { val: 0, speler: '-' },
+                    highestScore: { val: 0, speler: '-' },
+                    fastestLegTime: { val: 99999999, speler: '-' },
+                    fastestMatchTime: { val: 99999999, speler: '-' }
+                };
+            }
+            if (!state.records.highestScore || typeof state.records.highestScore !== 'object') state.records.highestScore = { val: 0, speler: '-' };
+            if (!state.records.fastestLegTime || typeof state.records.fastestLegTime !== 'object') state.records.fastestLegTime = { val: 99999999, speler: '-' };
+            if (!state.records.fastestMatchTime || typeof state.records.fastestMatchTime !== 'object') state.records.fastestMatchTime = { val: 99999999, speler: '-' };
 
             if (!state.completedLegs) state.completedLegs = [];
             if (!state.completedMatches) state.completedMatches = [];
@@ -149,7 +169,7 @@ function checkOverlayTrigger() {
     if (state.lastOverlay && state.lastOverlay.time !== windowLastOverlayTime) {
         let isRecord = state.lastOverlay.title.includes('RECORD');
         if (isRecord && currentView !== 'dashboard') {
-            // Tablets tonen enkel reguliere checkouts
+            // Tablets negeren full screen record meldingen
         } else {
             triggerOverlay(state.lastOverlay.title, state.lastOverlay.name, state.lastOverlay.subtitle);
         }
@@ -266,7 +286,14 @@ function genereerRoundRobinSchema() {
 
 function initStatsKlassen() {
     state.stats = {};
-    state.records = { highestCheckout: 0, shortestLeg: 999, highestMatchAvg: 0, highestScore: 0, fastestLegTime: 99999999, fastestMatchTime: 99999999 };
+    state.records = {
+        highestCheckout: { val: 0, speler: '-' },
+        shortestLeg: { val: 999, speler: '-' },
+        highestMatchAvg: { val: 0, speler: '-' },
+        highestScore: { val: 0, speler: '-' },
+        fastestLegTime: { val: 99999999, speler: '-' },
+        fastestMatchTime: { val: 99999999, speler: '-' }
+    };
     state.completedLegs = [];
     state.completedMatches = [];
     state.tournamentStartTime = null;
@@ -460,15 +487,51 @@ function updateLogboekOnly() {
 }
 
 function updateDashboardData() {
-    const activeB1 = state.matches.find(m => m.board === 'board1' && m.status !== 'finished' && m.status !== 'waiting');
-    const activeB2 = state.matches.find(m => m.board === 'board2' && m.status !== 'finished' && m.status !== 'waiting');
-    
-    let b1El = document.getElementById('tv-b1');
-    let b2El = document.getElementById('tv-b2');
-    if(b1El) { b1El.innerHTML = generateTVBoardHTML(activeB1); activeB1?b1El.classList.add('active'):b1El.classList.remove('active'); }
-    if(b2El) { b2El.innerHTML = generateTVBoardHTML(activeB2); activeB2?b2El.classList.add('active'):b2El.classList.remove('active'); }
+    const finMatch = state.matches.find(m => m.id === 'FIN');
+    const isTourneyOver = finMatch && (finMatch.status === 'finished' || finMatch.status === 'post_match');
 
-    updateLogboekOnly();
+    // EXCLUSIEF NA HET TOERNOOI: Hall of Fame en Winnaar presentatie!
+    if (isTourneyOver) {
+        let winnerNaam = finMatch.legs1 > finMatch.legs2 ? finMatch.p1 : finMatch.p2;
+        let b1El = document.getElementById('tv-b1');
+        let b2El = document.getElementById('tv-b2');
+        
+        if (b1El) {
+            b1El.innerHTML = `
+                <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:15px; background: linear-gradient(135deg, #1a1510 0%, #0b0c10 100%); border: 3px solid var(--gold); border-radius: 12px; box-shadow: 0 0 25px var(--gold-glow);">
+                    <h3 style="color:var(--gold); font-size:2.2rem; margin:0; text-transform:uppercase; text-shadow:0 0 10px var(--gold-glow); font-family:'Oswald', sans-serif;">🏆 PROFICIAT 🏆</h3>
+                    <div style="color:#fff; font-size:4.5rem; font-weight:bold; font-family:'Oswald', sans-serif; text-transform:uppercase; margin:20px 0; text-shadow: 0 0 30px var(--gold); text-align:center; line-height:1.1;">${winnerNaam}</div>
+                    <div style="color:var(--border); font-size:1.4rem; letter-spacing:2px; font-weight:bold; text-align:center;">KAMPION VAN HET TOERNOOI</div>
+                </div>
+            `;
+            b1El.classList.add('active');
+        }
+        if (b2El) {
+            b2El.innerHTML = `
+                <div style="flex:1; display:flex; flex-direction:column; padding:15px; background:var(--bg-dim); border: 2px solid #333; border-radius: 12px; justify-content: space-around;">
+                    <h3 style="color:var(--gold); font-size:1.3rem; margin:0 0 5px 0; text-transform:uppercase; text-align:center; border-bottom:2px solid var(--border); padding-bottom:5px; font-family:'Oswald', sans-serif;">👑 TOERNOOI RECORDHOUDERS 👑</h3>
+                    <table class="retro-table" style="font-size:1rem; width:100%;">
+                        <tr><td style="text-align:left;color:var(--border);padding:4px 0;">Hoogste Score</td><td style="text-align:right;font-weight:bold;color:#fff;">${state.records.highestScore.speler} (${state.records.highestScore.val})</td></tr>
+                        <tr><td style="text-align:left;color:var(--border);padding:4px 0;">Hoogste Finish</td><td style="text-align:right;font-weight:bold;color:#fff;">${state.records.highestCheckout.speler} (${state.records.highestCheckout.val})</td></tr>
+                        <tr><td style="text-align:left;color:var(--border);padding:4px 0;">Kortste Leg (Pijlen)</td><td style="text-align:right;font-weight:bold;color:#fff;">${state.records.shortestLeg.speler} (${state.records.shortestLeg.val})</td></tr>
+                        <tr><td style="text-align:left;color:var(--border);padding:4px 0;">Top Match Avg</td><td style="text-align:right;font-weight:bold;color:#fff;">${state.records.highestMatchAvg.speler} (${state.records.highestMatchAvg.val.toFixed(2)})</td></tr>
+                        <tr><td style="text-align:left;color:var(--border);padding:4px 0;">Snelste Leg (Tijd)</td><td style="text-align:right;font-weight:bold;color:#fff;">${state.records.fastestLegTime.speler} (${formatTime(state.records.fastestLegTime.val)})</td></tr>
+                        <tr><td style="text-align:left;color:var(--border);padding:4px 0;">Kortste Match (Tijd)</td><td style="text-align:right;font-weight:bold;color:#fff;">${state.records.fastestMatchTime.speler} (${formatTime(state.records.fastestMatchTime.val)})</td></tr>
+                    </table>
+                </div>
+            `;
+            b2El.classList.remove('active');
+        }
+    } else {
+        const activeB1 = state.matches.find(m => m.board === 'board1' && m.status !== 'finished' && m.status !== 'waiting');
+        const activeB2 = state.matches.find(m => m.board === 'board2' && m.status !== 'finished' && m.status !== 'waiting');
+        let b1El = document.getElementById('tv-b1');
+        let b2El = document.getElementById('tv-b2');
+        if(b1El) { b1El.innerHTML = generateTVBoardHTML(activeB1); activeB1?b1El.classList.add('active'):b1El.classList.remove('active'); }
+        if(b2El) { b2El.innerHTML = generateTVBoardHTML(activeB2); activeB2?b2El.classList.add('active'):b2El.classList.remove('active'); }
+    }
+
+    updateNavButtons();
 
     let sHTML = state.standings.map((s, i) => `<tr class="${i===0?'leader-row':''}">
         <td style="text-align:left; font-weight:bold;">${s.naam}</td>
@@ -481,7 +544,7 @@ function updateDashboardData() {
     let hf2 = state.matches.find(m => m.id === 'HF2');
     let fin = state.matches.find(m => m.id === 'FIN');
     
-    const koHtml = (t, m, colorClass) => m ? `<div class="knockout-row" style="${(m.status==='playing'||m.status==='bullen')?'color:var(--neon-green);font-weight:bold;':''}">
+    const koHtml = (t, m, colorClass) => m ? `<div class="knockout-row" style="${(m.status==='playing'||m.status==='bullen'||m.status==='post_match')?'color:var(--neon-green);font-weight:bold;':''}">
         <span class="knockout-title" style="color:var(--${colorClass});">${t}</span>
         <span style="flex:1; text-align:right;">${m.p1}</span>
         <span style="padding:0 10px; font-weight:bold; color:var(--${colorClass});">${(m.status==='finished'||m.status==='post_match')?`${m.legs1}-${m.legs2}`:'vs'}</span>
@@ -634,7 +697,7 @@ function updateTabletData(boardId) {
     if (m.status === 'bullen') {
         wrap.innerHTML = `
             <h2 style="font-size: clamp(1.5rem, 5vw, 2.5rem); color:var(--gold); text-align:center; margin-top:5vh;">🐂 BULLSEYE METING 🐂</h2>
-            <p style="font-size: clamp(1rem, 3vw, 1.4rem); text-align:center;">Wie smeet het dichtst bij de rode stip en mag openen?</p>
+            <p style="font-size: clamp(1rem, 3vw, 1.4rem); text-align:center;">Wie smeet het dichtst bij de rode stip Nic en mag openen?</p>
             <div style="display:flex; justify-content:center; gap:20px; margin-top:3vh;">
                 <button class="retro-button success" style="font-size: clamp(1.5rem, 5vw, 2.5rem); padding: 20px 40px;" onclick="bevestigBullenWinnaar('${m.id}', 1)">${m.p1}</button>
                 <button class="retro-button success" style="font-size: clamp(1.5rem, 5vw, 2.5rem); padding: 20px 40px;" onclick="bevestigBullenWinnaar('${m.id}', 2)">${m.p2}</button>
@@ -785,19 +848,45 @@ window.verwerkIngevuldeScore = async function(mId) {
 
     if (oldScore <= 170 && newScore <= 50) {
         let isHit = (newScore === 0);
-        showModal(`
-            <h2>❌ DUBBEL TRACKING (${oldScore} over)</h2>
-            <p>Hoeveel pijlen richting dubbel?</p>
-            <div class="modal-grid-3">
-                ${!isHit ? `<button class="modal-btn" onclick="bevestigDartsEnRekenUit('${m.id}', ${score}, 0, false)">0 Darts</button>` : ''}
-                <button class="modal-btn" onclick="bevestigDartsEnRekenUit('${m.id}', ${score}, 1, ${isHit})">1 Dart</button>
-                <button class="modal-btn" onclick="bevestigDartsEnRekenUit('${m.id}', ${score}, 2, ${isHit})">2 Darts</button>
-                <button class="modal-btn" onclick="bevestigDartsEnRekenUit('${m.id}', ${score}, 3, ${isHit})">3 Darts</button>
-            </div>
-        `);
+        
+        // UPGRADE: Geavanceerd Checkout Darts Tracking raster!
+        if (isHit) {
+            showModal(`
+                <h2>🎯 GEWELDIGE CHECKOUT!</h2>
+                <p>Hoeveel pijlen gesmeten en hoeveel op een dubbel?</p>
+                <div class="modal-grid-3" style="grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button class="modal-btn" style="font-size:1.1rem; padding:12px;" onclick="bevestigCheckoutDarts('${m.id}', ${score}, 1, 1)">1e pijl raak (1 tot, 1 dubbel)</button>
+                    <button class="modal-btn" style="font-size:1.1rem; padding:12px;" onclick="bevestigCheckoutDarts('${m.id}', ${score}, 2, 1)">2e pijl raak (2 tot, 1 dubbel)</button>
+                    <button class="modal-btn" style="font-size:1.1rem; padding:12px;" onclick="bevestigCheckoutDarts('${m.id}', ${score}, 2, 2)">2e pijl raak (2 tot, 2 dubbel)</button>
+                    <button class="modal-btn" style="font-size:1.1rem; padding:12px;" onclick="bevestigCheckoutDarts('${m.id}', ${score}, 3, 1)">3e pijl raak (3 tot, 1 dubbel)</button>
+                    <button class="modal-btn" style="font-size:1.1rem; padding:12px;" onclick="bevestigCheckoutDarts('${m.id}', ${score}, 3, 2)">3e pijl raak (3 tot, 2 dubbel)</button>
+                    <button class="modal-btn" style="font-size:1.1rem; padding:12px;" onclick="bevestigCheckoutDarts('${m.id}', ${score}, 3, 3)">3e pijl raak (3 tot, 3 dubbel)</button>
+                </div>
+            `);
+        } else {
+            showModal(`
+                <h2>❌ DUBBEL TRACKING (${oldScore} over)</h2>
+                <p>Hoeveel pijlen beurtelings naar een dubbel gemist?</p>
+                <div class="modal-grid-3">
+                    <button class="modal-btn" onclick="bevestigDartsEnRekenUit('${m.id}', ${score}, 0, false)">0 Darts</button>
+                    <button class="modal-btn" onclick="bevestigDartsEnRekenUit('${m.id}', ${score}, 1, false)">1 Dart</button>
+                    <button class="modal-btn" onclick="bevestigDartsEnRekenUit('${m.id}', ${score}, 2, false)">2 Darts</button>
+                    <button class="modal-btn" onclick="bevestigDartsEnRekenUit('${m.id}', ${score}, 3, false)">3 Darts</button>
+                </div>
+            `);
+        }
     } else {
         await voerScoreTransactieUit(m, score, 0, false);
     }
+}
+
+window.bevestigCheckoutDarts = async function(mId, score, totDarts, doubleDarts) {
+    const m = state.matches.find(x => x.id === mId);
+    const aP = m.turn === 1 ? m.p1 : m.p2;
+    state.stats[aP].doubleAttempts += doubleDarts;
+    state.stats[aP].doubleHits += 1;
+    hideModal();
+    await voerScoreTransactieUit(m, score, totDarts, true);
 }
 
 window.bevestigDartsEnRekenUit = async function(mId, score, doubleDarts, isHit) {
@@ -821,14 +910,13 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
 
     let overlayQueue = [];
 
-    // OPLOSSING BUG: HighScores en TonPlus updaten bij IEDERE geldige score
     if (score >= 100) {
         state.stats[aP].highScores.push(score);
         state.stats[aP].tonPlus++;
     }
 
-    if (score > state.records.highestScore) {
-        state.records.highestScore = score;
+    if (score > state.records.highestScore.val) {
+        state.records.highestScore = { val: score, speler: aP };
         overlayQueue.push({ title: "NIEUW RECORD!", name: aP, subtitle: score + " HOOGSTE SCORE" });
     }
 
@@ -838,7 +926,6 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
         state.stats[aP].first9Score += (score * (maxC/3)); 
     }
 
-    // Bij een BUST tellen de gegooide pijlen mee, maar we stoppen hier
     if (calcScore < 0 || calcScore === 1) {
         state.stats[aP].totalDarts += 3;
         m[dtLegStr] += 3; m['matchDarts' + m.turn] += 3;
@@ -868,8 +955,8 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
 
         let legTime = Date.now() - (m.legStartTime || Date.now());
         state.completedLegs.push({ winner: aP, loser: loser, time: legTime, matchId: m.id });
-        if (legTime < state.records.fastestLegTime && legTime > 3000) {
-            state.records.fastestLegTime = legTime;
+        if (legTime < state.records.fastestLegTime.val && legTime > 3000) {
+            state.records.fastestLegTime = { val: legTime, speler: aP };
             overlayQueue.push({ title: "RECORD SNELSTE LEG!", name: aP, subtitle: formatTime(legTime) + " TIJD" });
         }
         
@@ -877,16 +964,16 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
 
         overlayQueue.push({ title: "CHECKOUT!", name: aP, subtitle: score + " FINISH" });
 
-        if (score > state.records.highestCheckout) {
-            state.records.highestCheckout = score;
+        if (score > state.records.highestCheckout.val) {
+            state.records.highestCheckout = { val: score, speler: aP };
             overlayQueue.push({ title: "RECORD FINISH!", name: aP, subtitle: score + " CHECKOUT" });
         }
 
         let legAvg = ((m[scLegStr] / m[dtLegStr]) * 3).toFixed(2);
         if (m[dtLegStr] < state.stats[aP].shortestLeg.darts) state.stats[aP].shortestLeg = { darts: m[dtLegStr], avg: legAvg };
         
-        if (m[dtLegStr] < state.records.shortestLeg) {
-            state.records.shortestLeg = m[dtLegStr];
+        if (m[dtLegStr] < state.records.shortestLeg.val) {
+            state.records.shortestLeg = { val: m[dtLegStr], speler: aP };
             overlayQueue.push({ title: "RECORD KORTSTE LEG!", name: aP, subtitle: m[dtLegStr] + " PIJLEN" });
         }
 
@@ -897,8 +984,8 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
             
             let matchTime = Date.now() - (m.matchStartTime || Date.now());
             state.completedMatches.push({ winner: aP, loser: loser, time: matchTime, matchId: m.id });
-            if (matchTime < state.records.fastestMatchTime && matchTime > 5000) {
-                state.records.fastestMatchTime = matchTime;
+            if (matchTime < state.records.fastestMatchTime.val && matchTime > 5000) {
+                state.records.fastestMatchTime = { val: matchTime, speler: aP };
                 overlayQueue.push({ title: "RECORD KORTSTE MATCH!", name: aP, subtitle: formatTime(matchTime) + " TIJD" });
             }
 
@@ -907,11 +994,11 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
             state.stats[m.p1].matchAvgs.push(mAvg1);
             state.stats[m.p2].matchAvgs.push(mAvg2);
 
-            if (m.turn === 1 && mAvg1 > state.records.highestMatchAvg) {
-                 state.records.highestMatchAvg = mAvg1;
+            if (m.turn === 1 && mAvg1 > state.records.highestMatchAvg.val) {
+                 state.records.highestMatchAvg = { val: mAvg1, speler: m.p1 };
                  overlayQueue.push({ title: "RECORD MATCH AVG!", name: m.p1, subtitle: mAvg1.toFixed(2) + " AVG" });
-            } else if (m.turn === 2 && mAvg2 > state.records.highestMatchAvg) {
-                 state.records.highestMatchAvg = mAvg2;
+            } else if (m.turn === 2 && mAvg2 > state.records.highestMatchAvg.val) {
+                 state.records.highestMatchAvg = { val: mAvg2, speler: m.p2 };
                  overlayQueue.push({ title: "RECORD MATCH AVG!", name: m.p2, subtitle: mAvg2.toFixed(2) + " AVG" });
             }
 
@@ -965,5 +1052,81 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
 
 function showModal(h) { document.getElementById('modal-content').innerHTML = h; document.getElementById('action-modal').style.display = 'flex'; }
 function hideModal() { document.getElementById('action-modal').style.display = 'none'; }
+
+window.openExportModal = function() {
+    let text = "🏆 OG'S PRO DARTS 2026 - TOERNOOI STATS 🏆\n\n";
+    
+    text += "--- ALGEMEEN KLASSEMENT ---\n";
+    state.standings.forEach((s, i) => {
+        text += `${i+1}. ${s.naam} - ${s.pt} PT (Saldo: ${s.saldo > 0 ? '+'+s.saldo : s.saldo}) [${s.w}W - ${s.v}V]\n`;
+    });
+
+    text += "\n--- SPELER STATISTIEKEN ---\n";
+    alleSpelers.forEach(s => {
+        let st = state.stats[s];
+        let avg = st.totalDarts > 0 ? ((st.totalScore / st.totalDarts) * 3).toFixed(2) : "0.00";
+        let dbl = st.doubleAttempts > 0 ? ((st.doubleHits / st.doubleAttempts) * 100).toFixed(2) : "0.00";
+        let hf = st.checkouts.length > 0 ? Math.max(...st.checkouts) : 0;
+        let hs = st.highestScore || 0;
+        let avgL = st.legsPlayed > 0 ? (st.totalDarts / st.legsPlayed).toFixed(2) : "0.00";
+        let sl = st.shortestLeg && st.shortestLeg.darts !== 999 ? st.shortestLeg.darts : "-";
+        let mva = st.matchAvgs.length > 0 ? Math.max(...st.matchAvgs).toFixed(2) : "0.00";
+        let f9a = st.first9Darts > 0 ? ((st.first9Score / st.first9Darts) * 3).toFixed(2) : "0.00";
+        
+        let matches = state.completedMatches.filter(m => m.winner === s || m.loser === s);
+        let totalTime = matches.reduce((sum, m) => sum + m.time, 0);
+        let avgTime = matches.length > 0 ? formatTime(totalTime / matches.length) : "-";
+
+        text += `\n👤 ${s.toUpperCase()}\n`;
+        text += `- 3-Dart Avg: ${avg}\n`;
+        text += `- Double %: ${dbl}%\n`;
+        text += `- Hoogste Finish: ${hf}\n`;
+        text += `- Hoogste Score: ${hs}\n`;
+        text += `- Totaal Pijlen: ${st.totalDarts} (${avgL}/Leg)\n`;
+        text += `- Kortste Leg: ${sl} pijlen\n`;
+        text += `- Top Match Avg: ${mva}\n`;
+        text += `- First-9 Avg: ${f9a}\n`;
+        text += `- Ton-Plus (100+): ${st.tonPlus}\n`;
+        text += `- Bulls Gewonnen: ${st.bullsWon}\n`;
+        text += `- Breaks: ${st.breaks}\n`;
+        text += `- Gem. Match Duur: ${avgTime}\n`;
+    });
+
+    text += "\n--- TOERNOOI RECORDS ---\n";
+    let curTime = state.tournamentStartTime ? (Date.now() - state.tournamentStartTime) : 0;
+    text += `- Actieve Toernooi Duur: ${formatTimeLong(curTime)}\n`;
+    text += `- Hoogste Checkout: ${state.records.highestCheckout.speler} (${state.records.highestCheckout.val})\n`;
+    text += `- Hoogste Score: ${state.records.highestScore.speler} (${state.records.highestScore.val})\n`;
+    text += `- Top Match Avg: ${state.records.highestMatchAvg.speler} (${state.records.highestMatchAvg.val.toFixed(2)})\n`;
+    if (state.records.fastestLegTime.val !== 99999999) text += `- Snelste Leg (Tijd): ${state.records.fastestLegTime.speler} (${formatTime(state.records.fastestLegTime.val)})\n`;
+    if (state.records.fastestMatchTime.val !== 99999999) text += `- Kortste Match (Tijd): ${state.records.fastestMatchTime.speler} (${formatTime(state.records.fastestMatchTime.val)})\n`;
+
+    showModal(`
+        <h2 style="font-size: 2rem;">📋 TOERNOOI EXPORT</h2>
+        <p style="font-size: 1rem; margin-bottom: 10px;">Kopieer onderstaande tekst om in WhatsApp of Messenger te plakken.</p>
+        <textarea id="export-textarea" style="width:100%; height:45vh; background:#000; color:var(--gold); border:2px solid var(--border); border-radius:8px; padding:10px; font-family:monospace; font-size:1.2rem; resize:none;">${text}</textarea>
+        <div class="modal-grid-3" style="display:flex; justify-content:center; margin-top:2vh;">
+            <button class="retro-button success" onclick="copyExportText()">Kopiëren</button>
+            <button class="retro-button danger" onclick="hideModal()">Sluiten</button>
+        </div>
+    `);
+}
+
+window.copyExportText = function() {
+    let ta = document.getElementById('export-textarea');
+    ta.select();
+    ta.setSelectionRange(0, 99999);
+    try {
+        navigator.clipboard.writeText(ta.value).then(() => {
+            alert('Stats succesvol gekopieerd!');
+        }).catch(err => {
+            document.execCommand('copy');
+            alert('Stats gekopieerd!');
+        });
+    } catch (e) {
+        document.execCommand('copy');
+        alert('Stats gekopieerd!');
+    }
+}
 
 init();

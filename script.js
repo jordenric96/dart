@@ -113,6 +113,53 @@ window.getAbsoluteRecords = function() {
     return r;
 }
 
+// --- NIEUW: FINALE REKENING BEREKENTOOL (INCL WINNAAR) ---
+window.getRekeningData = function(winnerNaam = null) {
+    const drankDeel = 101 / 7;
+    let data = [
+        { id: "Stefaan", naam: "Stefaan (Gezin)", f: 35.60, s: true, personal_f: 12.10, order: "Stefaan: Kl. pak mayo, 2 kl. brochetten. Wesley: Kl. pak balletjes erop, zigeunerstick, curryketchup. Patricia: 1 kl. pak balletjes erop." },
+        { id: "Joël", naam: "Joël", f: 9.40, s: true, personal_f: 9.40, order: "Klein pak met balletjes" },
+        { id: "Wim", naam: "Wim & Nancy", f: 17.10, s: true, personal_f: 17.10, order: "Wim: Kl. pakske mayo apart met bicky crispy. Nancy: Kl. paksken met potje tartaar en bitterballen." },
+        { id: "Yarni", naam: "Yarni", f: 17.10, s: true, personal_f: 17.10, order: "Middel romboutje JOPPIE saus, kleine saté en potje andalouse" },
+        { id: "Dana", naam: "Jessy (Dana)", f: 21.40, s: false, personal_f: 0, order: "Dana: Groot pak met stoofvleessaus, mexicano, 2x chixfingers en frikandel" },
+        { id: "Vince", naam: "Vince", f: 15.90, s: true, personal_f: 15.90, order: "Julientje met mayo en een bicky burger" },
+        { id: "Tibe", naam: "Tibe", f: 13.50, s: true, personal_f: 13.50, order: "Julientje met mayonaise en een boulet" },
+        { id: "Jorden", naam: "Jorden", f: 15.90, s: true, personal_f: 15.90, order: "Julientje met mayo en een bicky cheese" }
+    ];
+
+    let prizeToSplit = 0;
+    let splitAmount = 0;
+
+    if (winnerNaam) {
+        let winnerObj = data.find(d => d.id === winnerNaam);
+        if (winnerObj) {
+            prizeToSplit = winnerObj.personal_f + (winnerObj.s ? drankDeel : 0);
+            splitAmount = prizeToSplit / 6; // Verdeeld over de 6 andere spelers
+        }
+    }
+
+    return data.map(d => {
+        let baseDrank = d.s ? drankDeel : 0;
+        let baseTotal = d.f + baseDrank;
+        let isWinner = (d.id === winnerNaam);
+        let finalToPay = baseTotal;
+
+        if (isWinner) {
+            finalToPay = baseTotal - prizeToSplit; 
+        } else if (d.s && winnerNaam) { 
+            finalToPay = baseTotal + splitAmount; 
+        }
+
+        return {
+            ...d,
+            drank: baseDrank,
+            extra: isWinner ? -prizeToSplit : (d.s && winnerNaam ? splitAmount : 0),
+            total: finalToPay,
+            isWinner: isWinner
+        };
+    });
+};
+
 async function init() {
     try {
         const { data, error } = await supabaseClient.from('toernooi_data').select('state').eq('id', 1).single();
@@ -577,13 +624,45 @@ function updateDashboardData() {
         let b1El = document.getElementById('tv-b1');
         let b2El = document.getElementById('tv-b2');
         let absRec = getAbsoluteRecords();
+        let finalBillData = window.getRekeningData(winnerNaam);
         
         if (b1El) {
             b1El.innerHTML = `
-                <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:15px; background: linear-gradient(135deg, #1a1510 0%, #0b0c10 100%); border: 3px solid var(--gold); border-radius: 12px; box-shadow: 0 0 25px var(--gold-glow);">
-                    <h3 style="color:var(--gold); font-size:2.2rem; margin:0; text-transform:uppercase; text-shadow:0 0 10px var(--gold-glow); font-family:'Oswald', sans-serif;">🏆 PROFICIAT 🏆</h3>
-                    <div style="color:#fff; font-size:4.5rem; font-weight:bold; font-family:'Oswald', sans-serif; text-transform:uppercase; margin:20px 0; text-shadow: 0 0 30px var(--gold); text-align:center; line-height:1.1;">${winnerNaam}</div>
-                    <div style="color:var(--border); font-size:1.4rem; letter-spacing:2px; font-weight:bold; text-align:center;">KAMPIOEN VAN HET TOERNOOI</div>
+                <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px; background: linear-gradient(135deg, #1a1510 0%, #0b0c10 100%); border: 3px solid var(--gold); border-radius: 12px; box-shadow: 0 0 25px var(--gold-glow);">
+                    <h3 style="color:var(--gold); font-size:clamp(1.2rem, 2.5vh, 2rem); margin:0; text-transform:uppercase; text-shadow:0 0 10px var(--gold-glow); font-family:'Oswald', sans-serif;">🏆 PROFICIAT 🏆</h3>
+                    <div style="color:#fff; font-size:clamp(2rem, 5vh, 3.5rem); font-weight:bold; font-family:'Oswald', sans-serif; text-transform:uppercase; margin:2px 0; text-shadow: 0 0 30px var(--gold); text-align:center; line-height:1.1;">${winnerNaam}</div>
+                    <div style="color:var(--border); font-size:clamp(0.8rem, 1.2vh, 1rem); letter-spacing:2px; font-weight:bold; text-align:center; margin-bottom: 10px;">KAMPIOEN VAN HET TOERNOOI</div>
+                    
+                    <div style="width: 100%; flex:1; display:flex; flex-direction:column; background: rgba(0,0,0,0.6); border-radius: 8px; padding: 8px; border: 1px solid #333; overflow:hidden;">
+                        <h4 style="color:var(--text-light); text-align:center; margin: 0 0 5px 0; font-size: clamp(0.75rem, 1.4vh, 1rem); border-bottom: 1px solid #444; padding-bottom: 4px;">💶 REKENING (WINNAAR BETAALT EIGEN DEEL NIET)</h4>
+                        <table class="retro-table" style="font-size: clamp(0.65rem, 1.2vh, 0.9rem); width: 100%; text-align: right; height: 100%;">
+                            <thead>
+                                <tr><th style="text-align:left;">Naam</th><th>Frituur</th><th>Drank</th><th>Trakteert</th><th style="color:var(--gold);">Totaal</th></tr>
+                            </thead>
+                            <tbody>
+                                ${finalBillData.map(d => {
+                                    let extraStr = d.extra === 0 ? "-" : (d.extra > 0 ? `+€${d.extra.toFixed(2)}` : `<span style="color:var(--neon-green);">-€${Math.abs(d.extra).toFixed(2)}</span>`);
+                                    let nameStr = d.isWinner ? `⭐ <span style="color:var(--gold); font-weight:bold;">${d.naam.substring(0, 10)}</span>` : `<span style="color:#fff;">${d.naam.substring(0, 15)}</span>`;
+                                    return `
+                                    <tr style="border-bottom: 1px solid #222;">
+                                        <td style="text-align:left; padding: 0.1vh 0;">${nameStr}</td>
+                                        <td style="padding: 0.1vh 0;">€${d.f.toFixed(2)}</td>
+                                        <td style="padding: 0.1vh 0;">€${d.drank.toFixed(2)}</td>
+                                        <td style="padding: 0.1vh 0;">${extraStr}</td>
+                                        <td style="color:var(--gold); font-weight:bold; padding: 0.1vh 0;">€${d.total.toFixed(2)}</td>
+                                    </tr>
+                                    `;
+                                }).join('')}
+                                <tr style="background: rgba(245,0,87,0.1); border-top: 2px solid var(--gold);">
+                                    <td style="text-align:left; color:var(--gold); font-weight:bold; padding: 0.2vh 0;">TOTAAL</td>
+                                    <td style="font-weight:bold; padding: 0.2vh 0;">€${finalBillData.reduce((a,b)=>a+b.f,0).toFixed(2)}</td>
+                                    <td style="font-weight:bold; padding: 0.2vh 0;">€${finalBillData.reduce((a,b)=>a+b.drank,0).toFixed(2)}</td>
+                                    <td style="font-weight:bold; padding: 0.2vh 0;">-</td>
+                                    <td style="color:var(--gold); font-weight:bold; padding: 0.2vh 0;">€${finalBillData.reduce((a,b)=>a+b.total,0).toFixed(2)}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             `;
             b1El.classList.add('active');
@@ -753,7 +832,6 @@ function buildTabletSkeleton(boardId) {
     appContainer.innerHTML = `<div id="tablet-wrapper" style="height:100%; width:100%; display:flex; flex-direction:column; min-height:0;"></div>`;
 }
 
-// --- ALLE WEDSTRIJDEN ZICHTBAAR MAKEN + UNLOCK FUNCTIE ---
 function updateTabletData(boardId) {
     const wrap = document.getElementById('tablet-wrapper');
     if(!wrap) return;
@@ -966,7 +1044,6 @@ window.annuleerLopendeMatch = async function(mId) {
     }
 }
 
-// --- OVERRIDE FUNCTIE VOOR GEBLOKKEERDE/GESPEELDE MATCHES ---
 window.forceerUnlockEnSpeel = async function(mId, boardId) {
     if(prompt("Deze wedstrijd is al gespeeld of geblokkeerd. Typ '1403' om te deblokkeren en opnieuw te starten:") === "1403") {
         await fetchLatestState();
@@ -1306,20 +1383,20 @@ function showModal(h) { document.getElementById('modal-content').innerHTML = h; 
 function hideModal() { document.getElementById('action-modal').style.display = 'none'; }
 
 window.openRekeningModal = function() {
+    const finMatch = state.matches.find(m => m.id === 'FIN');
+    const isTourneyOver = finMatch && (finMatch.status === 'finished' || finMatch.status === 'post_match');
+    let winnerNaam = isTourneyOver ? (finMatch.legs1 > finMatch.legs2 ? finMatch.p1 : finMatch.p2) : null;
+    
+    let billData = window.getRekeningData(winnerNaam);
     const drankDeel = (101 / 7).toFixed(2);
-    const data = [
-        { naam: "Stefaan (Gezin)", f: 35.60, s: true, order: "Stefaan: Kl. pak mayo, 2 kl. brochetten. Wesley: Kl. pak balletjes erop, zigeunerstick, curryketchup. Patricia: 1 kl. pak balletjes erop." },
-        { naam: "Joël", f: 9.40, s: true, order: "Klein pak met balletjes" },
-        { naam: "Wim & Nancy", f: 17.10, s: true, order: "Wim: Kl. pakske mayo apart met bicky crispy. Nancy: Kl. paksken met potje tartaar en bitterballen." },
-        { naam: "Yarni", f: 17.10, s: true, order: "Middel romboutje JOPPIE saus, kleine saté en potje andalouse" },
-        { naam: "Vince", f: 15.90, s: true, order: "Julientje met mayo en een bicky burger" },
-        { naam: "Tibe", f: 13.50, s: true, order: "Julientje met mayonaise en een boulet" },
-        { naam: "Jorden", f: 15.90, s: true, order: "Julientje met mayo en een bicky cheese" }
-    ];
+
+    let subtext = isTourneyOver 
+        ? `<p style="color:var(--neon-green); font-size:1.1rem; margin-bottom:15px; font-weight:bold;">🏆 ${winnerNaam} wint! Zijn maaltijd + drank wordt verdeeld onder de overige spelers.</p>`
+        : `<p style="color:#aaa; font-size:1rem; margin-bottom:15px;">Frituur + €101 drank gedeeld door de 7 spelers (€${drankDeel} p.p.)</p>`;
 
     let html = `
         <h2 style="font-size: clamp(1.5rem, 4vw, 2.5rem); color:var(--gold); margin-top:0;">💶 DE REKENING</h2>
-        <p style="color:#aaa; font-size:1rem; margin-bottom:15px;">Frituur + €101 drank gedeeld door de 7 spelers (€${drankDeel} p.p.)</p>
+        ${subtext}
         <div style="overflow-x:auto;">
         <table class="retro-table" style="width:100%; font-size:1.1rem; text-align:right;">
             <thead>
@@ -1327,30 +1404,30 @@ window.openRekeningModal = function() {
                     <th style="text-align:left;">Naam / Gezin</th>
                     <th>Frituur</th>
                     <th>Drank</th>
+                    ${isTourneyOver ? '<th>Traktatie</th>' : ''}
                     <th style="color:var(--gold);">Totaal</th>
                 </tr>
             </thead>
             <tbody>
     `;
 
-    let totFrituur = 0;
-    let totDrank = 0;
+    let totFrituur = 0, totDrank = 0, totTot = 0;
     
-    data.forEach(d => {
-        let drank = d.s ? 101/7 : 0;
-        let rowTot = d.f + drank;
-        totFrituur += d.f;
-        totDrank += drank;
-        
+    billData.forEach(d => {
+        totFrituur += d.f; totDrank += d.drank; totTot += d.total;
+        let extraStr = d.extra === 0 ? "-" : (d.extra > 0 ? `+€${d.extra.toFixed(2)}` : `<span style="color:var(--neon-green);">-€${Math.abs(d.extra).toFixed(2)}</span>`);
+        let nameStr = d.isWinner ? `⭐ <span style="color:var(--gold); font-weight:bold;">${d.naam}</span>` : `<span style="color:#fff; font-weight:bold;">${d.naam}</span>`;
+
         html += `
             <tr style="border-bottom: 1px dashed #333;">
                 <td style="text-align:left; padding: 10px 0;">
-                    <div style="color:#fff; font-weight:bold;">${d.naam}</div>
-                    <div style="color:#888; font-size:0.85rem; font-family:'Roboto Mono', monospace; white-space:normal; line-height:1.3; margin-top:5px;">${d.order}</div>
+                    <div>${nameStr}</div>
+                    <div style="color:#888; font-size:0.85rem; font-family:'Roboto Mono', monospace; white-space:normal; line-height:1.3; margin-top:5px;">${d.order || ''}</div>
                 </td>
                 <td style="vertical-align:top; padding: 10px 0;">€ ${d.f.toFixed(2)}</td>
-                <td style="vertical-align:top; padding: 10px 0;">€ ${drank.toFixed(2)}</td>
-                <td style="color:var(--gold); font-weight:bold; vertical-align:top; padding: 10px 0;">€ ${rowTot.toFixed(2)}</td>
+                <td style="vertical-align:top; padding: 10px 0;">€ ${d.drank.toFixed(2)}</td>
+                ${isTourneyOver ? `<td style="vertical-align:top; padding: 10px 0;">${extraStr}</td>` : ''}
+                <td style="color:var(--gold); font-weight:bold; vertical-align:top; padding: 10px 0;">€ ${d.total.toFixed(2)}</td>
             </tr>
         `;
     });
@@ -1360,7 +1437,8 @@ window.openRekeningModal = function() {
                 <td style="text-align:left; color:var(--gold); font-weight:bold; padding: 10px 0;">TOTAAL</td>
                 <td style="font-weight:bold; padding: 10px 0;">€ ${totFrituur.toFixed(2)}</td>
                 <td style="font-weight:bold; padding: 10px 0;">€ ${totDrank.toFixed(2)}</td>
-                <td style="color:var(--gold); font-weight:bold; font-size:1.3rem; padding: 10px 0;">€ ${(totFrituur + totDrank).toFixed(2)}</td>
+                ${isTourneyOver ? `<td style="font-weight:bold; padding: 10px 0;">-</td>` : ''}
+                <td style="color:var(--gold); font-weight:bold; font-size:1.3rem; padding: 10px 0;">€ ${totTot.toFixed(2)}</td>
             </tr>
             </tbody>
         </table>

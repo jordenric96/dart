@@ -457,6 +457,7 @@ function buildDashboardSkeleton() {
     appContainer.innerHTML = html;
 }
 
+// --- DYNAMISCHE SCORE CIRKEL EN VASTE LAYOUT ---
 function generateTVBoardHTML(match) {
     if (!match) return `<div style="flex:1; display:flex; align-items:center; justify-content:center; font-size:2.5rem; color:#444; font-weight:bold; font-family:'Oswald', sans-serif;">BORD VRIJ</div>`;
     
@@ -492,38 +493,40 @@ function generateTVBoardHTML(match) {
 
     let timerHTML = `<span style="font-size:0.8em; color:var(--gold);">M: <span class="live-timer-match" data-start="${match.matchStartTime}">00:00</span> | L: <span class="live-timer-leg" data-start="${match.legStartTime}">00:00</span></span>`;
 
-    let ring1 = `conic-gradient(var(--gold) ${Math.max(0, (match.score1/501)*100)}%, #222 0)`;
-    let ring2 = `conic-gradient(var(--gold) ${Math.max(0, (match.score2/501)*100)}%, #222 0)`;
+    // Cirkel Gradient (Start Pink -> Vloeit naar Wit)
+    let ring1 = `conic-gradient(var(--gold), #ffffff ${Math.max(0, (match.score1/501)*100)}%, #222 0)`;
+    let ring2 = `conic-gradient(var(--gold), #ffffff ${Math.max(0, (match.score2/501)*100)}%, #222 0)`;
 
+    // Rotsvaste Symmetrie (35% - 30% - 35%)
     return `
         <h3 style="margin-top:0;">
             <span style="font-size:0.7em; background:#444; padding:4px 10px; border-radius:4px;">${matchFase} | Leg ${match.legs1 + match.legs2 + 1}</span>
             ${timerHTML}
         </h3>
-        <div class="live-score-row" style="align-items: center;">
-            <div class="player-col ${active1}" style="flex:1;">
-                <div class="p-name" style="font-size: 1.5rem;">${match.p1}</div>
-                <div class="score-circle">
+        <div class="live-score-row" style="align-items: center; width: 100%; justify-content: space-between; margin-top: 1.5vh;">
+            <div class="player-col ${active1}" style="width: 35%; flex: none; padding: 0;">
+                <div class="p-name" style="font-size: 1.5rem; text-align: center; width: 100%; overflow: hidden; text-overflow: ellipsis;">${match.p1}</div>
+                <div class="score-circle" style="margin: 10px auto;">
                     <div class="score-circle-ring" style="background: ${ring1};"></div>
-                    <div class="p-score" style="font-size: 4.5rem;">${match.score1}</div>
+                    <div class="p-score" style="font-size: 3.2rem; margin: 0; text-align: center;">${match.score1}</div>
                 </div>
-                <div style="font-size: 0.85rem; color: #aaa; margin-top: 5px; white-space: nowrap;">Pijlen: ${match.dartsLeg1} | M-Avg: ${avg1}</div>
+                <div style="font-size: 0.9rem; color: #aaa; margin-top: 5px; text-align: center; white-space: nowrap;">Pijlen: ${match.dartsLeg1} | M-Avg: ${avg1}</div>
             </div>
             
-            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 0 10px;">
-                <span style="font-size: 0.9rem; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; margin-bottom: -5px;">Legs</span>
+            <div style="width: 30%; flex: none; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                <span style="font-size: 1rem; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; margin-bottom: -5px;">Legs</span>
                 <span style="font-size: 4.5rem; font-weight: bold; color: var(--gold); text-shadow: 0 0 20px var(--gold-glow); line-height: 1.1; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-variant-numeric: tabular-nums; white-space: nowrap;">
                     ${match.legs1} - ${match.legs2}
                 </span>
             </div>
 
-            <div class="player-col ${active2}" style="flex:1;">
-                <div class="p-name" style="font-size: 1.5rem;">${match.p2}</div>
-                <div class="score-circle">
+            <div class="player-col ${active2}" style="width: 35%; flex: none; padding: 0;">
+                <div class="p-name" style="font-size: 1.5rem; text-align: center; width: 100%; overflow: hidden; text-overflow: ellipsis;">${match.p2}</div>
+                <div class="score-circle" style="margin: 10px auto;">
                     <div class="score-circle-ring" style="background: ${ring2};"></div>
-                    <div class="p-score" style="font-size: 4.5rem;">${match.score2}</div>
+                    <div class="p-score" style="font-size: 3.2rem; margin: 0; text-align: center;">${match.score2}</div>
                 </div>
-                <div style="font-size: 0.85rem; color: #aaa; margin-top: 5px; white-space: nowrap;">Pijlen: ${match.dartsLeg2} | M-Avg: ${avg2}</div>
+                <div style="font-size: 0.9rem; color: #aaa; margin-top: 5px; text-align: center; white-space: nowrap;">Pijlen: ${match.dartsLeg2} | M-Avg: ${avg2}</div>
             </div>
         </div>`;
 }
@@ -823,8 +826,8 @@ function updateTabletData(boardId) {
         let avg2 = m.matchDarts2 > 0 ? ((m.matchScore2 / m.matchDarts2) * 3).toFixed(2) : "0.00";
         let titleStr = m.fase === 'poule' ? 'FIRST TO 3 LEGS (BO5)' : '🔥 FIRST TO 4 LEGS (BO7)';
 
-        let ring1 = `conic-gradient(var(--gold) ${Math.max(0, (m.score1/501)*100)}%, #222 0)`;
-        let ring2 = `conic-gradient(var(--gold) ${Math.max(0, (m.score2/501)*100)}%, #222 0)`;
+        let ring1 = `conic-gradient(var(--gold), #ffffff ${Math.max(0, (m.score1/501)*100)}%, #222 0)`;
+        let ring2 = `conic-gradient(var(--gold), #ffffff ${Math.max(0, (m.score2/501)*100)}%, #222 0)`;
 
         wrap.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1vh; gap: 10px;">

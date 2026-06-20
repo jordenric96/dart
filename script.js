@@ -95,7 +95,6 @@ window.getAbsoluteRecords = function() {
         if (p_tma > r.tma.val) r.tma = { speler: s, val: p_tma };
     });
 
-    // FILTER: Negeer poten > 20 min (780000 ms) ivm eetpauzes
     if (state.completedLegs && state.completedLegs.length > 0) {
         let validLegs = state.completedLegs.filter(l => l.time > 3000 && l.time < 780000);
         if (validLegs.length > 0) {
@@ -104,7 +103,6 @@ window.getAbsoluteRecords = function() {
         }
     }
     
-    // FILTER: Negeer matchen > 45 min (2700000 ms) ivm pauzes
     if (state.completedMatches && state.completedMatches.length > 0) {
         let validMatches = state.completedMatches.filter(m => m.time > 5000 && m.time < 2700000);
         if (validMatches.length > 0) {
@@ -710,8 +708,7 @@ function updateDashboardData() {
         if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = statBox('Hoogste Score', d_hsc);
 
     } else {
-        // FILTER: Negeer matchen/legs > 20 en > 45 min ivm pauzes
-        let validCompletedLegs = state.completedLegs.filter(l => l.time < 1200000);
+        let validCompletedLegs = state.completedLegs.filter(l => l.time < 780000);
         let sortedLegsAsc = [...validCompletedLegs].sort((a,b) => a.time - b.time).slice(0,7);
         let d_fastLeg = sortedLegsAsc.map(l => ({ naam: l.winner, val: l.time, txt: `${formatTime(l.time)} <span style="font-weight:normal;color:#888;font-size:0.8em;">(vs ${l.loser.substring(0,3)})</span>` }));
 
@@ -756,6 +753,7 @@ function buildTabletSkeleton(boardId) {
     appContainer.innerHTML = `<div id="tablet-wrapper" style="height:100%; width:100%; display:flex; flex-direction:column; min-height:0;"></div>`;
 }
 
+// --- ALLE WEDSTRIJDEN ZICHTBAAR MAKEN + UNLOCK FUNCTIE ---
 function updateTabletData(boardId) {
     const wrap = document.getElementById('tablet-wrapper');
     if(!wrap) return;
@@ -773,16 +771,42 @@ function updateTabletData(boardId) {
             </div>
             <div class="match-selector">`;
             
-        state.matches.filter(x => x.status === 'waiting' && !x.p1.includes('Plaats') && !x.p1.includes('Winnaar')).forEach(x => {
+        const validMatches = state.matches.filter(x => !x.p1.includes('Plaats') && !x.p1.includes('Winnaar'));
+        
+        validMatches.forEach(x => {
             let label = x.fase === 'poule' ? 'POULE' : (x.fase === 'HF' ? 'HALVE FINALE' : 'FINALE');
-            let isLocked = state.matches.some(busy => busy.status !== 'waiting' && busy.status !== 'finished' && busy.id !== x.id && (busy.p1===x.p1 || busy.p2===x.p1 || busy.p1===x.p2 || busy.p2===x.p2));
-            if(isLocked) {
-                html += `<div class="match-option locked"><span>🔒 Speler is al bezig</span><span style="font-size:0.5em; display:block;">${label}</span>${x.p1} 🆚 ${x.p2}</div>`;
+            
+            let playerBusyElsewhere = state.matches.some(busy => 
+                (busy.status === 'playing' || busy.status === 'paused' || busy.status === 'bullen') && 
+                busy.id !== x.id && 
+                (busy.p1 === x.p1 || busy.p2 === x.p1 || busy.p1 === x.p2 || busy.p2 === x.p2)
+            );
+
+            let boxClass = "match-option";
+            let boxContent = "";
+            let clickAction = "";
+
+            if (x.status === 'finished' || x.status === 'post_match') {
+                boxClass += " locked";
+                boxContent = `<span style="color:var(--neon-green);">EINDSTAND: ${x.legs1} - ${x.legs2}</span><span style="font-size:0.5em; display:block;">${label}</span>${x.p1} 🆚 ${x.p2}`;
+                clickAction = `forceerUnlockEnSpeel('${x.id}', '${boardId}')`;
+            } else if (x.status === 'playing' || x.status === 'paused' || x.status === 'bullen') {
+                boxClass += " locked";
+                boxContent = `<span style="color:var(--gold);">🎯 Bezig op ${x.board.toUpperCase()}</span><span style="font-size:0.5em; display:block;">${label}</span>${x.p1} 🆚 ${x.p2}`;
+                clickAction = `forceerUnlockEnSpeel('${x.id}', '${boardId}')`;
+            } else if (playerBusyElsewhere) {
+                boxClass += " locked";
+                boxContent = `<span>🔒 Speler is elders bezig</span><span style="font-size:0.5em; display:block;">${label}</span>${x.p1} 🆚 ${x.p2}`;
+                clickAction = `forceerUnlockEnSpeel('${x.id}', '${boardId}')`;
             } else {
-                html += `<div class="match-option" onclick="koppelMatchAanBord('${x.id}', '${boardId}')"><span style="font-size:0.5em; color:var(--gold); display:block;">${label}</span>${x.p1} 🆚 ${x.p2}</div>`;
+                boxContent = `<span style="font-size:0.5em; color:var(--gold); display:block;">${label}</span>${x.p1} 🆚 ${x.p2}`;
+                clickAction = `koppelMatchAanBord('${x.id}', '${boardId}')`;
             }
+
+            html += `<div class="${boxClass}" onclick="${clickAction}">${boxContent}</div>`;
         });
-        if(state.matches.filter(x => x.status === 'waiting' && !x.p1.includes('Plaats') && !x.p1.includes('Winnaar')).length === 0) { html += `<h2 style="text-align:center;">Geen wedstrijden beschikbaar...</h2>`; }
+
+        if(validMatches.length === 0) { html += `<h2 style="text-align:center;">Geen wedstrijden beschikbaar...</h2>`; }
         wrap.innerHTML = html + `</div>`;
         return;
     }
@@ -942,6 +966,31 @@ window.annuleerLopendeMatch = async function(mId) {
     }
 }
 
+// --- OVERRIDE FUNCTIE VOOR GEBLOKKEERDE/GESPEELDE MATCHES ---
+window.forceerUnlockEnSpeel = async function(mId, boardId) {
+    if(prompt("Deze wedstrijd is al gespeeld of geblokkeerd. Typ '1403' om te deblokkeren en opnieuw te starten:") === "1403") {
+        await fetchLatestState();
+        const m = state.matches.find(x => x.id === mId);
+        
+        if (window.finishTimeouts && window.finishTimeouts[mId]) {
+            clearTimeout(window.finishTimeouts[mId]);
+            delete window.finishTimeouts[mId];
+        }
+
+        m.status = 'bullen';
+        m.board = boardId;
+        m.legs1 = 0; m.legs2 = 0; m.score1 = 501; m.score2 = 501;
+        m.dartsLeg1 = 0; m.dartsLeg2 = 0; m.scoreLeg1 = 0; m.scoreLeg2 = 0;
+        m.matchDarts1 = 0; m.matchScore1 = 0; m.matchDarts2 = 0; m.matchScore2 = 0;
+        m.pauseStart = null;
+        m.history = [];
+        
+        localStorage.setItem('myBoard', boardId);
+        appContainer.innerHTML = '';
+        await saveState(true);
+    }
+};
+
 window.bevestigBullenWinnaar = async function(mId, pNum) {
     await fetchLatestState();
     const m = state.matches.find(x => x.id === mId);
@@ -957,7 +1006,6 @@ window.bevestigBullenWinnaar = async function(mId, pNum) {
     await saveState(true);
 }
 
-// --- NIEUW: PAUZE FUNCTIES ---
 window.pauseMatch = async function(mId) {
     await fetchLatestState();
     const m = state.matches.find(x => x.id === mId);

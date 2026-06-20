@@ -1,15 +1,15 @@
 :root {
     /* 🦓 BROTHERS IN DARTS THEMA 🦓 */
-    --bg-dark: #050505;       /* Diep shirt-zwart */
-    --card-bg: #121212;       /* Donkergrijs voor de panelen */
-    --gold: #f50057;          /* HOT PINK! (Variabele naam blijft 'gold' voor script compatibiliteit) */
+    --bg-dark: #050505;
+    --card-bg: #121212;
+    --gold: #f50057; /* Hot Pink */
     --gold-glow: rgba(245, 0, 87, 0.45);
     --text-main: #cccccc;
-    --text-light: #ffffff;    /* De spierwitte streep op het shirt */
-    --border: #333333;        /* Subtiele binnenranden */
+    --text-light: #ffffff;
+    --border: #333333;
     --bg-dim: #000000;
     --silver: #a0a0a0;
-    --neon-green: #00e676;    /* Iets fellere groen voor contrast met roze */
+    --neon-green: #00e676;
     --neon-red: #ff1744;
 }
 
@@ -39,7 +39,7 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
     padding: 0.3vh 0.4vw;
 }
 
-/* Navigatie (Met de witte shirt-streep!) */
+/* Navigatie */
 .top-nav {
     background-color: #000000; display: flex; justify-content: space-between; align-items: center;
     padding: 1vh 2vw; border-bottom: 4px solid var(--text-light); box-sizing: border-box; height: 6vh; flex-shrink: 0;
@@ -77,7 +77,6 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .gold-card { border-color: var(--gold); background: #1a0810; }
 .gold-card h2 { color: var(--gold); border-bottom-color: var(--gold); }
 
-/* Aftelbalk in Hot Pink & Wit */
 .stats-progress-container { width: 100%; height: 5px; background: #111; border-radius: 3px; margin-bottom: 0.5vh; overflow: hidden; border: 1px solid #222; flex-shrink: 0;}
 .stats-progress-fill { height: 100%; background: linear-gradient(90deg, var(--text-light), var(--gold)); width: 0%; transition: width 0.1s linear; }
 
@@ -93,7 +92,7 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .live-board h3 { margin: 0; font-size: 1rem; color: #fff; display: flex; justify-content: space-between; align-items: center; } 
 .live-score-row { display: flex; justify-content: space-around; align-items: stretch; margin-top: 1vh; flex: 1;}
 
-.player-col { display: flex; flex-direction: column; align-items: center; width: 45%; transition: all 0.3s ease;}
+.player-col { display: flex; flex-direction: column; align-items: center; width: 45%; transition: all 0.3s ease; justify-content: center;}
 .player-col.turn-active { transform: scale(1.05); }
 .player-col.turn-active .p-name { color: #fff; text-shadow: 0 0 8px var(--gold); font-weight: bold; }
 .player-col.turn-active .p-score { color: var(--gold); text-shadow: 0 0 15px var(--gold-glow); }
@@ -103,12 +102,33 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .player-col.turn-inactive .p-score { color: var(--gold); text-shadow: 0 0 5px rgba(245, 0, 87, 0.3); }
 
 .p-name { font-size: 1.2rem; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; transition: color 0.3s; font-family: 'Oswald', sans-serif;}
-.p-score { font-size: 3.5rem; font-weight: bold; line-height: 1; transition: color 0.3s; }
+.p-score { font-size: 3.5rem; font-weight: bold; line-height: 1; transition: color 0.3s; margin: 0;}
 .p-legs { font-size: 0.8rem; background: #000; border: 1px solid #333; padding: 4px 8px; border-radius: 4px; margin-bottom: 5px;}
 .p-avg { font-size: 0.75rem; color: #aaa; margin-top: 5px;}
 
-.momentum-container { width: 100%; height: 6px; background: #111; border-radius: 3px; margin-top: 8px; overflow: hidden; border: 1px solid #333;}
-.momentum-fill { height: 100%; background: linear-gradient(90deg, var(--text-light), var(--gold)); width: 0%; transition: width 0.4s ease-out; }
+/* --- NIEUW: DYNAMISCHE SCORE CIRKEL --- */
+.score-circle {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    margin: 8px auto;
+    height: 120px; /* Vaste maat voor de TV */
+}
+.score-circle.tablet-circle {
+    height: auto;
+    width: clamp(100px, 20vw, 220px);
+    margin: 0;
+}
+.score-circle-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    -webkit-mask: radial-gradient(closest-side, transparent 86%, black 87%);
+    mask: radial-gradient(closest-side, transparent 86%, black 87%);
+}
 
 /* Tabellen */
 .retro-table { width: 100%; border-collapse: collapse; font-size: clamp(0.7rem, 1.4vh, 0.95rem); table-layout: fixed; }
@@ -116,7 +136,6 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .retro-table th { color: var(--gold); font-size: 0.9em; }
 .retro-table tr:nth-child(even) { background-color: rgba(255,255,255,0.02); }
 
-/* ZEBRA EASTER EGG VOOR DE KOPLOPER */
 .retro-table tr.leader-row { 
     background: repeating-linear-gradient(45deg, rgba(245, 0, 87, 0.15), rgba(245, 0, 87, 0.15) 10px, rgba(0,0,0,0) 10px, rgba(0,0,0,0) 20px); 
     font-weight: bold; color: #fff; 
@@ -179,7 +198,7 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
 .pane-info-wrapper { display: flex; flex-direction: column; align-items: center; width: 100%;}
 .pane-name { font-size: clamp(2rem, 6vw, 4rem); color: #fff; margin: 0; text-transform: uppercase; font-family: 'Oswald', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center;}
 .pane-legs { font-size: clamp(0.9rem, 3vw, 1.5rem); background: var(--gold); color: #fff; font-weight: bold; padding: 4px 15px; border-radius: 4px; margin: 1vh 0; white-space: nowrap;}
-.pane-score { font-size: clamp(4.5rem, 20vw, 12rem); color: var(--text-light); margin: 0; line-height: 1; font-weight: bold; }
+.pane-score { font-size: clamp(3rem, 15vw, 10rem); color: var(--text-light); margin: 0; line-height: 1; font-weight: bold; position: relative; z-index: 2;}
 .pane-score.checkout-ready { color: var(--gold); }
 .pane-stats { font-size: clamp(0.8rem, 2.5vw, 1.2rem); color: #888; margin-top: 1vh; white-space: nowrap;}
 
@@ -218,7 +237,7 @@ h1, h2, h3, h4, .nav-title, .nav-btn, .pane-name, .board-header, .retro-table th
     .pane { flex-direction: row; justify-content: space-between; align-items: center; padding: 10px 20px; }
     .pane-info-wrapper { align-items: flex-start; width: auto; flex: 1;}
     .pane-name { font-size: clamp(1.8rem, 4vw, 3.5rem); text-align: left; }
-    .pane-score { font-size: clamp(4.5rem, 12vw, 10rem); text-align: right;}
+    .pane-score { text-align: right;}
     .pane-legs { font-size: clamp(0.9rem, 2vw, 1.5rem); margin: 5px 0; padding: 4px 10px;}
     .pane-stats { margin-top: 0; font-size: clamp(0.8rem, 1.5vw, 1.2rem); }
 }

@@ -95,16 +95,18 @@ window.getAbsoluteRecords = function() {
         if (p_tma > r.tma.val) r.tma = { speler: s, val: p_tma };
     });
 
+    // FILTER: Negeer poten > 20 min (780000 ms) ivm eetpauzes
     if (state.completedLegs && state.completedLegs.length > 0) {
-        let validLegs = state.completedLegs.filter(l => l.time > 3000);
+        let validLegs = state.completedLegs.filter(l => l.time > 3000 && l.time < 780000);
         if (validLegs.length > 0) {
             let bestL = validLegs.reduce((p, c) => (c.time < p.time ? c : p));
             r.flt = { speler: bestL.winner, val: bestL.time };
         }
     }
     
+    // FILTER: Negeer matchen > 45 min (2700000 ms) ivm pauzes
     if (state.completedMatches && state.completedMatches.length > 0) {
-        let validMatches = state.completedMatches.filter(m => m.time > 5000);
+        let validMatches = state.completedMatches.filter(m => m.time > 5000 && m.time < 2700000);
         if (validMatches.length > 0) {
             let bestM = validMatches.reduce((p, c) => (c.time < p.time ? c : p));
             r.fmt = { speler: bestM.winner, val: bestM.time };
@@ -159,6 +161,7 @@ async function init() {
                 if (m.matchDarts2 === undefined) m.matchDarts2 = 0;
                 if (m.matchScore2 === undefined) m.matchScore2 = 0;
                 if (!m.history) m.history = [];
+                if (m.pauseStart === undefined) m.pauseStart = null;
                 if (m.status === 'playing') {
                     if (!m.matchStartTime) m.matchStartTime = Date.now();
                     if (!m.legStartTime) m.legStartTime = Date.now();
@@ -328,7 +331,7 @@ function maakMatchObj(id, p1, p2, fase) {
         legs1: 0, legs2: 0, score1: 501, score2: 501, turn: null, startThrower: null,
         dartsLeg1: 0, dartsLeg2: 0, scoreLeg1: 0, scoreLeg2: 0,
         matchDarts1: 0, matchScore1: 0, matchDarts2: 0, matchScore2: 0,
-        matchStartTime: null, legStartTime: null, history: []
+        matchStartTime: null, legStartTime: null, history: [], pauseStart: null
     };
 }
 
@@ -457,7 +460,6 @@ function buildDashboardSkeleton() {
     appContainer.innerHTML = html;
 }
 
-// --- DYNAMISCHE SCORE CIRKEL EN VASTE LAYOUT ---
 function generateTVBoardHTML(match) {
     if (!match) return `<div style="flex:1; display:flex; align-items:center; justify-content:center; font-size:2.5rem; color:#444; font-weight:bold; font-family:'Oswald', sans-serif;">BORD VRIJ</div>`;
     
@@ -488,16 +490,21 @@ function generateTVBoardHTML(match) {
     let avg2 = match.matchDarts2 > 0 ? ((match.matchScore2 / match.matchDarts2) * 3).toFixed(2) : "0.00";
     let matchFase = match.fase === 'poule' ? 'Best of 5' : 'Best of 7';
 
-    let active1 = match.turn === 1 ? 'turn-active' : 'turn-inactive';
-    let active2 = match.turn === 2 ? 'turn-active' : 'turn-inactive';
+    let active1 = match.turn === 1 && match.status !== 'paused' ? 'turn-active' : 'turn-inactive';
+    let active2 = match.turn === 2 && match.status !== 'paused' ? 'turn-active' : 'turn-inactive';
 
-    let timerHTML = `<span style="font-size:0.8em; color:var(--gold);">M: <span class="live-timer-match" data-start="${match.matchStartTime}">00:00</span> | L: <span class="live-timer-leg" data-start="${match.legStartTime}">00:00</span></span>`;
+    let timerHTML = "";
+    if (match.status === 'paused') {
+        let mTime = match.pauseStart - match.matchStartTime;
+        let lTime = match.pauseStart - match.legStartTime;
+        timerHTML = `<span style="font-size:0.8em; color:var(--neon-red); font-weight:bold;">⏸ PAUZE</span> <span style="font-size:0.8em; color:var(--gold);">| M: ${formatTime(mTime)} | L: ${formatTime(lTime)}</span>`;
+    } else {
+        timerHTML = `<span style="font-size:0.8em; color:var(--gold);">M: <span class="live-timer-match" data-start="${match.matchStartTime}">00:00</span> | L: <span class="live-timer-leg" data-start="${match.legStartTime}">00:00</span></span>`;
+    }
 
-    // Cirkel Gradient (Start Pink -> Vloeit naar Wit)
     let ring1 = `conic-gradient(var(--gold), #ffffff ${Math.max(0, (match.score1/501)*100)}%, #222 0)`;
     let ring2 = `conic-gradient(var(--gold), #ffffff ${Math.max(0, (match.score2/501)*100)}%, #222 0)`;
 
-    // Rotsvaste Symmetrie (35% - 30% - 35%)
     return `
         <h3 style="margin-top:0;">
             <span style="font-size:0.7em; background:#444; padding:4px 10px; border-radius:4px;">${matchFase} | Leg ${match.legs1 + match.legs2 + 1}</span>
@@ -545,6 +552,7 @@ function updateLogboekOnly() {
     contentEl.innerHTML = currentM.map(m => {
         let p1Cls = "", p2Cls = "", label = "Wacht", itemCls = "";
         if (m.status === 'playing') { label = `B${m.board === 'board1' ? 1 : 2}`; itemCls = "bezig"; }
+        else if (m.status === 'paused') { label = `Pauze B${m.board === 'board1' ? 1 : 2}`; itemCls = "bullen"; }
         else if (m.status === 'bullen') { label = "Bullen"; itemCls = "bullen"; }
         else if (m.status === 'finished' || m.status === 'post_match') { 
             label = `${m.legs1} - ${m.legs2}`; 
@@ -620,7 +628,7 @@ function updateDashboardData() {
     let hf2 = state.matches.find(m => m.id === 'HF2');
     let fin = state.matches.find(m => m.id === 'FIN');
     
-    const koHtml = (t, m, colorClass) => m ? `<div class="knockout-row" style="${(m.status==='playing'||m.status==='bullen'||m.status==='post_match')?'color:var(--neon-green);font-weight:bold;':''}">
+    const koHtml = (t, m, colorClass) => m ? `<div class="knockout-row" style="${(m.status==='playing'||m.status==='bullen'||m.status==='post_match'||m.status==='paused')?'color:var(--neon-green);font-weight:bold;':''}">
         <span class="knockout-title" style="color:var(--${colorClass});">${t}</span>
         <span style="flex:1; text-align:right;">${m.p1}</span>
         <span style="padding:0 10px; font-weight:bold; color:var(--${colorClass});">${(m.status==='finished'||m.status==='post_match')?`${m.legs1}-${m.legs2}`:'vs'}</span>
@@ -689,7 +697,7 @@ function updateDashboardData() {
         
         let d_bul = top7(alleSpelers.map(s => {
             let bWon = state.stats[s]?.bullsWon || 0;
-            let mStarted = state.matches.filter(m => (m.p1 === s || m.p2 === s) && ['playing', 'post_match', 'finished'].includes(m.status)).length;
+            let mStarted = state.matches.filter(m => (m.p1 === s || m.p2 === s) && ['playing', 'post_match', 'finished', 'paused'].includes(m.status)).length;
             let perc = mStarted > 0 ? ((bWon / mStarted) * 100).toFixed(2) : "0.00";
             return { naam: s, val: bWon, txt: `${bWon} <span style="font-weight:normal;color:#888;">(${perc}%)</span>` };
         }));
@@ -702,20 +710,23 @@ function updateDashboardData() {
         if(document.getElementById('sb-6')) document.getElementById('sb-6').innerHTML = statBox('Hoogste Score', d_hsc);
 
     } else {
-        let sortedLegsAsc = [...state.completedLegs].sort((a,b) => a.time - b.time).slice(0,7);
+        // FILTER: Negeer matchen/legs > 20 en > 45 min ivm pauzes
+        let validCompletedLegs = state.completedLegs.filter(l => l.time < 1200000);
+        let sortedLegsAsc = [...validCompletedLegs].sort((a,b) => a.time - b.time).slice(0,7);
         let d_fastLeg = sortedLegsAsc.map(l => ({ naam: l.winner, val: l.time, txt: `${formatTime(l.time)} <span style="font-weight:normal;color:#888;font-size:0.8em;">(vs ${l.loser.substring(0,3)})</span>` }));
 
-        let sortedLegsDesc = [...state.completedLegs].sort((a,b) => b.time - a.time).slice(0,7);
+        let sortedLegsDesc = [...validCompletedLegs].sort((a,b) => b.time - a.time).slice(0,7);
         let d_slowLeg = sortedLegsDesc.map(l => ({ naam: l.winner, val: l.time, txt: `${formatTime(l.time)} <span style="font-weight:normal;color:#888;font-size:0.8em;">(vs ${l.loser.substring(0,3)})</span>` }));
 
-        let sortedMatchesAsc = [...state.completedMatches].sort((a,b) => a.time - b.time).slice(0,7);
+        let validCompletedMatches = state.completedMatches.filter(m => m.time < 2700000);
+        let sortedMatchesAsc = [...validCompletedMatches].sort((a,b) => a.time - b.time).slice(0,7);
         let d_fastMatch = sortedMatchesAsc.map(l => ({ naam: l.winner, val: l.time, txt: `${formatTime(l.time)} <span style="font-weight:normal;color:#888;font-size:0.8em;">(vs ${l.loser.substring(0,3)})</span>` }));
 
-        let sortedMatchesDesc = [...state.completedMatches].sort((a,b) => b.time - a.time).slice(0,7);
+        let sortedMatchesDesc = [...validCompletedMatches].sort((a,b) => b.time - a.time).slice(0,7);
         let d_slowMatch = sortedMatchesDesc.map(l => ({ naam: l.winner, val: l.time, txt: `${formatTime(l.time)} <span style="font-weight:normal;color:#888;font-size:0.8em;">(vs ${l.loser.substring(0,3)})</span>` }));
 
         let d_avgMatchDur = top7(alleSpelers.map(s => {
-            let matches = state.completedMatches.filter(m => m.winner === s || m.loser === s);
+            let matches = validCompletedMatches.filter(m => m.winner === s || m.loser === s);
             let total = matches.reduce((sum, m) => sum + m.time, 0);
             let avg = matches.length > 0 ? (total / matches.length) : 0;
             return { naam: s, val: avg, txt: avg > 0 ? formatTime(avg) : '-' };
@@ -787,6 +798,20 @@ function updateTabletData(boardId) {
             <div style="text-align:center; margin-top:5vh;"><button class="retro-button danger" onclick="annuleerLopendeMatch('${m.id}')">Annuleer Match</button></div>`;
         return;
     }
+
+    if (m.status === 'paused') {
+        wrap.innerHTML = `
+            <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; background: #0a0a0a; border-radius: 12px; border: 3px solid var(--border);">
+                <h2 style="font-size: clamp(3rem, 10vw, 5rem); color:var(--neon-red); text-align:center; margin-bottom: 2vh; text-shadow: 0 0 20px rgba(255, 23, 68, 0.5);">⏸ GEPAUZEERD</h2>
+                <p style="color:#aaa; font-size: 1.5rem; margin-bottom: 5vh;">De wedstrijd is veilig op pauze gezet.</p>
+                <button class="retro-button success" style="font-size: clamp(1.5rem, 5vw, 2.5rem); padding: 20px 50px;" onclick="resumeMatch('${m.id}')">▶ HERVATTEN</button>
+                <div style="margin-top: 4vh;">
+                    <button class="retro-button danger" style="font-size: 1rem; padding: 10px 20px;" onclick="annuleerLopendeMatch('${m.id}')">Match Afbreken</button>
+                </div>
+            </div>
+        `;
+        return;
+    }
     
     if (m.status === 'post_match') {
         let mAvg1 = m.matchDarts1 > 0 ? ((m.matchScore1 / m.matchDarts1) * 3).toFixed(2) : "0.00";
@@ -833,6 +858,7 @@ function updateTabletData(boardId) {
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1vh; gap: 10px;">
                 <span style="font-size: clamp(1rem, 4vw, 1.5rem); font-weight:bold; color:var(--gold); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${boardId.toUpperCase()} - ${titleStr}</span>
                 <div style="display:flex; gap:10px;">
+                    <button class="retro-button" style="background:#444; color:#fff; border-color:#666; padding:4px clamp(5px, 2vw, 10px); font-size:clamp(0.7rem, 2.5vw, 1rem);" onclick="pauseMatch('${m.id}')">⏸ PAUZE</button>
                     <button class="retro-button" style="background:#555; color:#fff; border-color:#888; padding:4px clamp(5px, 2vw, 10px); font-size:clamp(0.7rem, 2.5vw, 1rem);" onclick="undoScore('${m.id}')">↩ UNDO</button>
                     <button class="retro-button danger" style="padding:4px clamp(5px, 2vw, 10px); font-size:clamp(0.7rem, 2.5vw, 1rem); flex-shrink:0;" onclick="annuleerLopendeMatch('${m.id}')">Afbreken</button>
                 </div>
@@ -909,6 +935,7 @@ window.annuleerLopendeMatch = async function(mId) {
         m.status = 'waiting'; m.board = null; m.legs1 = 0; m.legs2 = 0; m.score1 = 501; m.score2 = 501;
         m.dartsLeg1 = 0; m.dartsLeg2 = 0; m.scoreLeg1 = 0; m.scoreLeg2 = 0;
         m.matchDarts1 = 0; m.matchScore1 = 0; m.matchDarts2 = 0; m.matchScore2 = 0;
+        m.pauseStart = null;
         localStorage.removeItem('myBoard');
         appContainer.innerHTML = '';
         await saveState(true);
@@ -926,6 +953,28 @@ window.bevestigBullenWinnaar = async function(mId, pNum) {
     m.matchStartTime = Date.now();
     m.legStartTime = Date.now();
     
+    appContainer.innerHTML = '';
+    await saveState(true);
+}
+
+// --- NIEUW: PAUZE FUNCTIES ---
+window.pauseMatch = async function(mId) {
+    await fetchLatestState();
+    const m = state.matches.find(x => x.id === mId);
+    m.status = 'paused';
+    m.pauseStart = Date.now();
+    appContainer.innerHTML = '';
+    await saveState(true);
+}
+
+window.resumeMatch = async function(mId) {
+    await fetchLatestState();
+    const m = state.matches.find(x => x.id === mId);
+    let pausedDuration = Date.now() - m.pauseStart;
+    m.legStartTime += pausedDuration;
+    m.matchStartTime += pausedDuration;
+    m.pauseStart = null;
+    m.status = 'playing';
     appContainer.innerHTML = '';
     await saveState(true);
 }
@@ -1208,7 +1257,6 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
 function showModal(h) { document.getElementById('modal-content').innerHTML = h; document.getElementById('action-modal').style.display = 'flex'; }
 function hideModal() { document.getElementById('action-modal').style.display = 'none'; }
 
-// --- REKENING MODAL ---
 window.openRekeningModal = function() {
     const drankDeel = (101 / 7).toFixed(2);
     const data = [

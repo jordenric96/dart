@@ -24,7 +24,6 @@ if (!document.getElementById('finish-overlay')) {
     document.body.appendChild(ov);
 }
 
-// --- KNOPPEN TOEVOEGEN ---
 const navContainer = document.querySelector('.nav-buttons');
 if (navContainer && !document.getElementById('export-btn')) {
     let rekBtn = document.createElement('button');
@@ -58,17 +57,15 @@ function formatTimeLong(ms) {
     return `${h > 0 ? (h + ':') : ''}${m < 10 ? '0':''}${m}:${s < 10 ? '0':''}${s}`;
 }
 
-// --- ANTI-DATABOTSING FUNCTIE (Verhelpt de Canceled Scores) ---
 async function fetchLatestState() {
     try {
         const { data } = await supabaseClient.from('toernooi_data').select('state').eq('id', 1).single();
         if (data && data.state && Object.keys(data.state).length > 0) {
-            state = data.state; // We overschrijven onze lokale staat met de absolute nieuwste waarheid
+            state = data.state;
         }
     } catch (e) { console.error("Fout bij ophalen verse data", e); }
 }
 
-// --- DYNAMISCHE RECORD EXTRACTOR DIE DATA HERSTELT ---
 window.getAbsoluteRecords = function() {
     let r = {
         hs: { speler: '-', val: 0 },
@@ -493,10 +490,10 @@ function generateTVBoardHTML(match) {
     let active1 = match.turn === 1 ? 'turn-active' : 'turn-inactive';
     let active2 = match.turn === 2 ? 'turn-active' : 'turn-inactive';
 
-    let mom1 = Math.min(100, (match.dartsLeg1 / 24) * 100); 
-    let mom2 = Math.min(100, (match.dartsLeg2 / 24) * 100); 
-
     let timerHTML = `<span style="font-size:0.8em; color:var(--gold);">M: <span class="live-timer-match" data-start="${match.matchStartTime}">00:00</span> | L: <span class="live-timer-leg" data-start="${match.legStartTime}">00:00</span></span>`;
+
+    let ring1 = `conic-gradient(var(--gold) ${Math.max(0, (match.score1/501)*100)}%, #222 0)`;
+    let ring2 = `conic-gradient(var(--gold) ${Math.max(0, (match.score2/501)*100)}%, #222 0)`;
 
     return `
         <h3 style="margin-top:0;">
@@ -506,23 +503,27 @@ function generateTVBoardHTML(match) {
         <div class="live-score-row" style="align-items: center;">
             <div class="player-col ${active1}" style="flex:1;">
                 <div class="p-name" style="font-size: 1.5rem;">${match.p1}</div>
-                <div class="p-score" style="font-size: 4.5rem;">${match.score1}</div>
-                <div style="font-size: 0.85rem; color: #aaa; margin-top: 8px; white-space: nowrap;">Pijlen: ${match.dartsLeg1} | M-Avg: ${avg1}</div>
-                <div class="momentum-container" style="width: 80%; margin: 8px auto 0;"><div class="momentum-fill" style="width:${mom1}%"></div></div>
+                <div class="score-circle">
+                    <div class="score-circle-ring" style="background: ${ring1};"></div>
+                    <div class="p-score" style="font-size: 4.5rem;">${match.score1}</div>
+                </div>
+                <div style="font-size: 0.85rem; color: #aaa; margin-top: 5px; white-space: nowrap;">Pijlen: ${match.dartsLeg1} | M-Avg: ${avg1}</div>
             </div>
             
             <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 0 10px;">
                 <span style="font-size: 0.9rem; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; margin-bottom: -5px;">Legs</span>
-                <span style="font-size: 4.5rem; font-weight: bold; color: var(--gold); text-shadow: 0 0 20px var(--gold-glow); line-height: 1; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-variant-numeric: tabular-nums;">
+                <span style="font-size: 4.5rem; font-weight: bold; color: var(--gold); text-shadow: 0 0 20px var(--gold-glow); line-height: 1.1; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-variant-numeric: tabular-nums; white-space: nowrap;">
                     ${match.legs1} - ${match.legs2}
                 </span>
             </div>
 
             <div class="player-col ${active2}" style="flex:1;">
                 <div class="p-name" style="font-size: 1.5rem;">${match.p2}</div>
-                <div class="p-score" style="font-size: 4.5rem;">${match.score2}</div>
-                <div style="font-size: 0.85rem; color: #aaa; margin-top: 8px; white-space: nowrap;">Pijlen: ${match.dartsLeg2} | M-Avg: ${avg2}</div>
-                <div class="momentum-container" style="width: 80%; margin: 8px auto 0;"><div class="momentum-fill" style="width:${mom2}%"></div></div>
+                <div class="score-circle">
+                    <div class="score-circle-ring" style="background: ${ring2};"></div>
+                    <div class="p-score" style="font-size: 4.5rem;">${match.score2}</div>
+                </div>
+                <div style="font-size: 0.85rem; color: #aaa; margin-top: 5px; white-space: nowrap;">Pijlen: ${match.dartsLeg2} | M-Avg: ${avg2}</div>
             </div>
         </div>`;
 }
@@ -822,6 +823,9 @@ function updateTabletData(boardId) {
         let avg2 = m.matchDarts2 > 0 ? ((m.matchScore2 / m.matchDarts2) * 3).toFixed(2) : "0.00";
         let titleStr = m.fase === 'poule' ? 'FIRST TO 3 LEGS (BO5)' : '🔥 FIRST TO 4 LEGS (BO7)';
 
+        let ring1 = `conic-gradient(var(--gold) ${Math.max(0, (m.score1/501)*100)}%, #222 0)`;
+        let ring2 = `conic-gradient(var(--gold) ${Math.max(0, (m.score2/501)*100)}%, #222 0)`;
+
         wrap.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1vh; gap: 10px;">
                 <span style="font-size: clamp(1rem, 4vw, 1.5rem); font-weight:bold; color:var(--gold); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${boardId.toUpperCase()} - ${titleStr}</span>
@@ -839,7 +843,10 @@ function updateTabletData(boardId) {
                             <div class="pane-legs">LEGS: ${m.legs1} | PIJLEN: ${m.dartsLeg1}</div>
                             <div class="pane-stats">Match Avg: ${avg1}</div>
                         </div>
-                        <div class="pane-score ${m.score1<=170?'checkout-ready':''}">${m.score1}</div>
+                        <div class="score-circle tablet-circle">
+                            <div class="score-circle-ring" style="background: ${ring1};"></div>
+                            <div class="pane-score ${m.score1<=170?'checkout-ready':''}">${m.score1}</div>
+                        </div>
                     </div>
                     
                     <div class="pane ${m.turn===2?'pane-active':'pane-inactive'}">
@@ -848,7 +855,10 @@ function updateTabletData(boardId) {
                             <div class="pane-legs">LEGS: ${m.legs2} | PIJLEN: ${m.dartsLeg2}</div>
                             <div class="pane-stats">Match Avg: ${avg2}</div>
                         </div>
-                        <div class="pane-score ${m.score2<=170?'checkout-ready':''}">${m.score2}</div>
+                        <div class="score-circle tablet-circle">
+                            <div class="score-circle-ring" style="background: ${ring2};"></div>
+                            <div class="pane-score ${m.score2<=170?'checkout-ready':''}">${m.score2}</div>
+                        </div>
                     </div>
                 </div>
 
@@ -961,7 +971,7 @@ window.verwerkIngevuldeScore = async function(mId) {
     
     if (score < 0 || score > 180) { alert("Ongeldig (0-180)!"); return; }
 
-    await fetchLatestState(); // ANTI-DATABOTSING
+    await fetchLatestState(); 
     const m = state.matches.find(x => x.id === mId);
     const oldScore = m.turn === 1 ? m.score1 : m.score2;
     let newScore = oldScore - score;
@@ -1007,7 +1017,7 @@ window.verwerkIngevuldeScore = async function(mId) {
 
 window.bevestigCheckoutDarts = async function(mId, score, totDarts, doubleDarts) {
     hideModal();
-    await fetchLatestState(); // ANTI-DATABOTSING
+    await fetchLatestState(); 
     const m = state.matches.find(x => x.id === mId);
     const aP = m.turn === 1 ? m.p1 : m.p2;
     state.stats[aP].doubleAttempts += doubleDarts;
@@ -1017,7 +1027,7 @@ window.bevestigCheckoutDarts = async function(mId, score, totDarts, doubleDarts)
 
 window.bevestigDartsEnRekenUit = async function(mId, score, doubleDarts, isHit) {
     hideModal();
-    await fetchLatestState(); // ANTI-DATABOTSING
+    await fetchLatestState(); 
     const m = state.matches.find(x => x.id === mId);
     const aP = m.turn === 1 ? m.p1 : m.p2;
     state.stats[aP].doubleAttempts += doubleDarts;

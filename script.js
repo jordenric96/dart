@@ -12,6 +12,7 @@ let windowLastOverlayTime = 0;
 let logboekIndex = 0;
 let statsPage = 0;
 let dashboardTimerMs = 0; 
+window.finishTimeouts = {}; // Houdt bij of een match gaat aflopen om dit te kunnen annuleren
 
 const appContainer = document.getElementById('app-container');
 const navButtons = document.querySelectorAll('.nav-btn');
@@ -150,6 +151,7 @@ async function init() {
                 if (m.matchScore1 === undefined) m.matchScore1 = 0;
                 if (m.matchDarts2 === undefined) m.matchDarts2 = 0;
                 if (m.matchScore2 === undefined) m.matchScore2 = 0;
+                if (!m.history) m.history = []; // History array voor UNDO
                 if (m.status === 'playing') {
                     if (!m.matchStartTime) m.matchStartTime = Date.now();
                     if (!m.legStartTime) m.legStartTime = Date.now();
@@ -319,7 +321,7 @@ function maakMatchObj(id, p1, p2, fase) {
         legs1: 0, legs2: 0, score1: 501, score2: 501, turn: null, startThrower: null,
         dartsLeg1: 0, dartsLeg2: 0, scoreLeg1: 0, scoreLeg2: 0,
         matchDarts1: 0, matchScore1: 0, matchDarts2: 0, matchScore2: 0,
-        matchStartTime: null, legStartTime: null
+        matchStartTime: null, legStartTime: null, history: []
     };
 }
 
@@ -774,7 +776,10 @@ function updateTabletData(boardId) {
         wrap.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1vh; gap: 10px;">
                 <span style="font-size: clamp(1rem, 4vw, 1.5rem); font-weight:bold; color:var(--gold); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">📊 MATCH STATS (${boardId.toUpperCase()})</span>
-                <button class="retro-button danger" style="padding:4px clamp(5px, 2vw, 10px); font-size:clamp(0.7rem, 2.5vw, 1rem); flex-shrink:0;" onclick="sluitTabletEnFinishMatch('${m.id}')">Overslaan ⏭</button>
+                <div style="display:flex; gap:10px;">
+                    <button class="retro-button" style="background:#555; color:#fff; border-color:#888; padding:4px clamp(5px, 2vw, 10px); font-size:clamp(0.7rem, 2.5vw, 1rem);" onclick="undoScore('${m.id}')">↩ OEPS (UNDO)</button>
+                    <button class="retro-button danger" style="padding:4px clamp(5px, 2vw, 10px); font-size:clamp(0.7rem, 2.5vw, 1rem); flex-shrink:0;" onclick="sluitTabletEnFinishMatch('${m.id}')">Overslaan ⏭</button>
+                </div>
             </div>
             <div style="flex:1; display:flex; justify-content:center; align-items:center; background:var(--card-bg); border:3px solid var(--gold); border-radius:12px; overflow:hidden;">
                 <div style="display:flex; justify-content:space-around; width:100%; color:#fff; text-transform:uppercase;">
@@ -805,7 +810,10 @@ function updateTabletData(boardId) {
         wrap.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1vh; gap: 10px;">
                 <span style="font-size: clamp(1rem, 4vw, 1.5rem); font-weight:bold; color:var(--gold); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${boardId.toUpperCase()} - ${titleStr}</span>
-                <button class="retro-button danger" style="padding:4px clamp(5px, 2vw, 10px); font-size:clamp(0.7rem, 2.5vw, 1rem); flex-shrink:0;" onclick="annuleerLopendeMatch('${m.id}')">Afbreken</button>
+                <div style="display:flex; gap:10px;">
+                    <button class="retro-button" style="background:#555; color:#fff; border-color:#888; padding:4px clamp(5px, 2vw, 10px); font-size:clamp(0.7rem, 2.5vw, 1rem);" onclick="undoScore('${m.id}')">↩ UNDO</button>
+                    <button class="retro-button danger" style="padding:4px clamp(5px, 2vw, 10px); font-size:clamp(0.7rem, 2.5vw, 1rem); flex-shrink:0;" onclick="annuleerLopendeMatch('${m.id}')">Afbreken</button>
+                </div>
             </div>
             
             <div class="tablet-grid">
@@ -898,6 +906,35 @@ window.sluitTablet = function() {
     render(); 
 }
 
+// --- NIEUW: UNDO FUNCTIE ---
+window.undoScore = async function(mId) {
+    const m = state.matches.find(x => x.id === mId);
+    if (m && m.history && m.history.length > 0) {
+        let snap = m.history.pop();
+        let keptHistory = m.history;
+        
+        // Annuleer een automatische match-afsluiting mocht die aan het lopen zijn
+        if (window.finishTimeouts && window.finishTimeouts[mId]) {
+            clearTimeout(window.finishTimeouts[mId]);
+            delete window.finishTimeouts[mId];
+        }
+
+        Object.assign(m, snap.match);
+        m.history = keptHistory;
+
+        state.stats[m.p1] = snap.statsP1;
+        state.stats[m.p2] = snap.statsP2;
+        state.records = snap.records;
+        state.completedLegs = snap.completedLegs;
+        state.completedMatches = snap.completedMatches;
+
+        appContainer.innerHTML = '';
+        await saveState(true);
+    } else {
+        alert("Oeps! Geen worp meer gevonden om ongedaan te maken.");
+    }
+}
+
 window.verwerkIngevuldeScore = async function(mId) {
     let score = parseInt(padInputString) || 0;
     padInputString = ""; 
@@ -922,6 +959,9 @@ window.verwerkIngevuldeScore = async function(mId) {
                     <button class="modal-btn" style="font-size:1.1rem; padding:12px;" onclick="bevestigCheckoutDarts('${m.id}', ${score}, 3, 2)">3e pijl raak (3 tot, 2 dubbel)</button>
                     <button class="modal-btn" style="font-size:1.1rem; padding:12px;" onclick="bevestigCheckoutDarts('${m.id}', ${score}, 3, 3)">3e pijl raak (3 tot, 3 dubbel)</button>
                 </div>
+                <div style="margin-top: 20px;">
+                    <button class="retro-button danger" onclick="hideModal()">❌ Annuleren (Typfout)</button>
+                </div>
             `);
         } else {
             showModal(`
@@ -932,6 +972,9 @@ window.verwerkIngevuldeScore = async function(mId) {
                     <button class="modal-btn" onclick="bevestigDartsEnRekenUit('${m.id}', ${score}, 1, false)">1 Dart</button>
                     <button class="modal-btn" onclick="bevestigDartsEnRekenUit('${m.id}', ${score}, 2, false)">2 Darts</button>
                     <button class="modal-btn" onclick="bevestigDartsEnRekenUit('${m.id}', ${score}, 3, false)">3 Darts</button>
+                </div>
+                <div style="margin-top: 20px;">
+                    <button class="retro-button danger" onclick="hideModal()">❌ Annuleren (Typfout)</button>
                 </div>
             `);
         }
@@ -959,6 +1002,22 @@ window.bevestigDartsEnRekenUit = async function(mId, score, doubleDarts, isHit) 
 }
 
 async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
+    
+    // --- SNAPSHOT VOOR DE UNDO FUNCTIE ---
+    if (!m.history) m.history = [];
+    let matchCopy = { ...m };
+    delete matchCopy.history; 
+    m.history.push({
+        match: JSON.parse(JSON.stringify(matchCopy)),
+        statsP1: JSON.parse(JSON.stringify(state.stats[m.p1])),
+        statsP2: JSON.parse(JSON.stringify(state.stats[m.p2])),
+        records: JSON.parse(JSON.stringify(state.records)),
+        completedLegs: JSON.parse(JSON.stringify(state.completedLegs)),
+        completedMatches: JSON.parse(JSON.stringify(state.completedMatches))
+    });
+    if (m.history.length > 5) m.history.shift(); 
+    // ------------------------------------
+
     const scStr = m.turn === 1 ? 'score1' : 'score2';
     const dtLegStr = m.turn === 1 ? 'dartsLeg1' : 'dartsLeg2';
     const scLegStr = m.turn === 1 ? 'scoreLeg1' : 'scoreLeg2';
@@ -1070,7 +1129,8 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
             appContainer.innerHTML = '';
             await saveState(true);
             
-            setTimeout(async () => {
+            if (!window.finishTimeouts) window.finishTimeouts = {};
+            window.finishTimeouts[m.id] = setTimeout(async () => {
                 const actM = state.matches.find(x => x.id === m.id);
                 if (actM && actM.status === 'post_match') {
                     actM.status = 'finished';

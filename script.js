@@ -57,7 +57,7 @@ function formatTimeLong(ms) {
     return `${h > 0 ? (h + ':') : ''}${m < 10 ? '0':''}${m}:${s < 10 ? '0':''}${s}`;
 }
 
-// --- NIEUW: DYNAMISCHE RECORD EXTRACTOR DIE DATA HERSTELT ---
+// --- DYNAMISCHE RECORD EXTRACTOR DIE DATA HERSTELT ---
 window.getAbsoluteRecords = function() {
     let r = {
         hs: { speler: '-', val: 0 },
@@ -1117,14 +1117,13 @@ function hideModal() { document.getElementById('action-modal').style.display = '
 window.openRekeningModal = function() {
     const drankDeel = (101 / 7).toFixed(2);
     const data = [
-        { naam: "Stefaan (Gezin)", f: 35.60, s: true },
-        { naam: "Joël", f: 9.40, s: true },
-        { naam: "Wim & Nancy", f: 17.10, s: true },
-        { naam: "Yarni", f: 14.60, s: true },
-        { naam: "Jessy (Dana)", f: 21.40, s: false },
-        { naam: "Vince", f: 15.90, s: true },
-        { naam: "Tibe", f: 13.50, s: true },
-        { naam: "Jorden", f: 15.90, s: true }
+        { naam: "Stefaan (Gezin)", f: 35.60, s: true, order: "Stefaan: Kl. pak mayo, 2 kl. brochetten. Wesley: Kl. pak balletjes erop, zigeunerstick, curryketchup. Patricia: 1 kl. pak balletjes erop." },
+        { naam: "Joël", f: 9.40, s: true, order: "Klein pak met balletjes" },
+        { naam: "Wim & Nancy", f: 17.10, s: true, order: "Wim: Kl. pakske mayo apart met bicky crispy. Nancy: Kl. paksken met potje tartaar en bitterballen." },
+        { naam: "Yarni", f: 17.10, s: true, order: "Middel romboutje JOPPIE saus, kleine saté en potje andalouse" },
+        { naam: "Vince", f: 15.90, s: true, order: "Julientje met mayo en een bicky burger" },
+        { naam: "Tibe", f: 13.50, s: true, order: "Julientje met mayonaise en een boulet" },
+        { naam: "Jorden", f: 15.90, s: true, order: "Julientje met mayo en een bicky cheese" }
     ];
 
     let html = `
@@ -1153,21 +1152,24 @@ window.openRekeningModal = function() {
         totDrank += drank;
         
         html += `
-            <tr>
-                <td style="text-align:left; color:#fff;">${d.naam}</td>
-                <td>€ ${d.f.toFixed(2)}</td>
-                <td>€ ${drank.toFixed(2)}</td>
-                <td style="color:var(--gold); font-weight:bold;">€ ${rowTot.toFixed(2)}</td>
+            <tr style="border-bottom: 1px dashed #333;">
+                <td style="text-align:left; padding: 10px 0;">
+                    <div style="color:#fff; font-weight:bold;">${d.naam}</div>
+                    <div style="color:#888; font-size:0.85rem; font-family:'Roboto Mono', monospace; white-space:normal; line-height:1.3; margin-top:5px;">${d.order}</div>
+                </td>
+                <td style="vertical-align:top; padding: 10px 0;">€ ${d.f.toFixed(2)}</td>
+                <td style="vertical-align:top; padding: 10px 0;">€ ${drank.toFixed(2)}</td>
+                <td style="color:var(--gold); font-weight:bold; vertical-align:top; padding: 10px 0;">€ ${rowTot.toFixed(2)}</td>
             </tr>
         `;
     });
 
     html += `
-            <tr style="background: rgba(255,183,3,0.1); border-top: 2px solid var(--gold);">
-                <td style="text-align:left; color:var(--gold); font-weight:bold;">TOTAAL</td>
-                <td style="font-weight:bold;">€ ${totFrituur.toFixed(2)}</td>
-                <td style="font-weight:bold;">€ ${totDrank.toFixed(2)}</td>
-                <td style="color:var(--gold); font-weight:bold; font-size:1.3rem;">€ ${(totFrituur + totDrank).toFixed(2)}</td>
+            <tr style="background: rgba(245,0,87,0.1); border-top: 2px solid var(--gold);">
+                <td style="text-align:left; color:var(--gold); font-weight:bold; padding: 10px 0;">TOTAAL</td>
+                <td style="font-weight:bold; padding: 10px 0;">€ ${totFrituur.toFixed(2)}</td>
+                <td style="font-weight:bold; padding: 10px 0;">€ ${totDrank.toFixed(2)}</td>
+                <td style="color:var(--gold); font-weight:bold; font-size:1.3rem; padding: 10px 0;">€ ${(totFrituur + totDrank).toFixed(2)}</td>
             </tr>
             </tbody>
         </table>

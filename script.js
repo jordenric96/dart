@@ -12,7 +12,7 @@ let windowLastOverlayTime = 0;
 let logboekIndex = 0;
 let statsPage = 0;
 let dashboardTimerMs = 0; 
-window.finishTimeouts = {}; // Houdt bij of een match gaat aflopen om dit te kunnen annuleren
+window.finishTimeouts = {}; 
 
 const appContainer = document.getElementById('app-container');
 const navButtons = document.querySelectorAll('.nav-btn');
@@ -56,6 +56,16 @@ function formatTimeLong(ms) {
     let m = Math.floor((totalSeconds % 3600) / 60);
     let s = totalSeconds % 60;
     return `${h > 0 ? (h + ':') : ''}${m < 10 ? '0':''}${m}:${s < 10 ? '0':''}${s}`;
+}
+
+// --- ANTI-DATABOTSING FUNCTIE (Verhelpt de Canceled Scores) ---
+async function fetchLatestState() {
+    try {
+        const { data } = await supabaseClient.from('toernooi_data').select('state').eq('id', 1).single();
+        if (data && data.state && Object.keys(data.state).length > 0) {
+            state = data.state; // We overschrijven onze lokale staat met de absolute nieuwste waarheid
+        }
+    } catch (e) { console.error("Fout bij ophalen verse data", e); }
 }
 
 // --- DYNAMISCHE RECORD EXTRACTOR DIE DATA HERSTELT ---
@@ -151,7 +161,7 @@ async function init() {
                 if (m.matchScore1 === undefined) m.matchScore1 = 0;
                 if (m.matchDarts2 === undefined) m.matchDarts2 = 0;
                 if (m.matchScore2 === undefined) m.matchScore2 = 0;
-                if (!m.history) m.history = []; // History array voor UNDO
+                if (!m.history) m.history = [];
                 if (m.status === 'playing') {
                     if (!m.matchStartTime) m.matchStartTime = Date.now();
                     if (!m.legStartTime) m.legStartTime = Date.now();
@@ -463,14 +473,14 @@ function generateTVBoardHTML(match) {
             <div style="display:flex; justify-content:space-around; align-items:center; flex:1; text-transform:uppercase;">
                 <div style="text-align:center;">
                     <h2 style="color:var(--gold); font-size:2.2rem; margin:0;">${match.p1}</h2>
-                    <div style="font-size:1.2rem; color:#fff;">LEGS: ${match.legs1}</div>
-                    <div style="font-size:1.2rem; color:#fff;">AVG: ${mAvg1}</div>
+                    <div style="font-size:1.5rem; color:#fff;">LEGS: ${match.legs1}</div>
+                    <div style="font-size:1.2rem; color:#fff; margin-top:10px;">AVG: ${mAvg1}</div>
                     <div style="font-size:1rem; color:#aaa;">Pijlen: ${match.matchDarts1}</div>
                 </div>
                 <div style="text-align:center;">
                     <h2 style="color:var(--gold); font-size:2.2rem; margin:0;">${match.p2}</h2>
-                    <div style="font-size:1.2rem; color:#fff;">LEGS: ${match.legs2}</div>
-                    <div style="font-size:1.2rem; color:#fff;">AVG: ${mAvg2}</div>
+                    <div style="font-size:1.5rem; color:#fff;">LEGS: ${match.legs2}</div>
+                    <div style="font-size:1.2rem; color:#fff; margin-top:10px;">AVG: ${mAvg2}</div>
                     <div style="font-size:1rem; color:#aaa;">Pijlen: ${match.matchDarts2}</div>
                 </div>
             </div>`;
@@ -493,21 +503,26 @@ function generateTVBoardHTML(match) {
             <span style="font-size:0.7em; background:#444; padding:4px 10px; border-radius:4px;">${matchFase} | Leg ${match.legs1 + match.legs2 + 1}</span>
             ${timerHTML}
         </h3>
-        <div class="live-score-row">
-            <div class="player-col ${active1}">
-                <div class="p-name">${match.p1}</div>
-                <div class="p-legs">Legs: ${match.legs1} | Pijlen: ${match.dartsLeg1}</div>
-                <div class="p-score">${match.score1}</div>
-                <div class="momentum-container"><div class="momentum-fill" style="width:${mom1}%"></div></div>
-                <div class="p-avg">M-Avg: ${avg1}</div>
+        <div class="live-score-row" style="align-items: center;">
+            <div class="player-col ${active1}" style="flex:1;">
+                <div class="p-name" style="font-size: 1.5rem;">${match.p1}</div>
+                <div class="p-score" style="font-size: 4.5rem;">${match.score1}</div>
+                <div style="font-size: 0.85rem; color: #aaa; margin-top: 8px; white-space: nowrap;">Pijlen: ${match.dartsLeg1} | M-Avg: ${avg1}</div>
+                <div class="momentum-container" style="width: 80%; margin: 8px auto 0;"><div class="momentum-fill" style="width:${mom1}%"></div></div>
             </div>
-            <div style="display:flex; align-items:center; font-size:1.5rem; color:#444;">VS</div>
-            <div class="player-col ${active2}">
-                <div class="p-name">${match.p2}</div>
-                <div class="p-legs">Legs: ${match.legs2} | Pijlen: ${match.dartsLeg2}</div>
-                <div class="p-score">${match.score2}</div>
-                <div class="momentum-container"><div class="momentum-fill" style="width:${mom2}%"></div></div>
-                <div class="p-avg">M-Avg: ${avg2}</div>
+            
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 0 10px;">
+                <span style="font-size: 0.9rem; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; margin-bottom: -5px;">Legs</span>
+                <span style="font-size: 4.5rem; font-weight: bold; color: var(--gold); text-shadow: 0 0 20px var(--gold-glow); line-height: 1; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-variant-numeric: tabular-nums;">
+                    ${match.legs1} - ${match.legs2}
+                </span>
+            </div>
+
+            <div class="player-col ${active2}" style="flex:1;">
+                <div class="p-name" style="font-size: 1.5rem;">${match.p2}</div>
+                <div class="p-score" style="font-size: 4.5rem;">${match.score2}</div>
+                <div style="font-size: 0.85rem; color: #aaa; margin-top: 8px; white-space: nowrap;">Pijlen: ${match.dartsLeg2} | M-Avg: ${avg2}</div>
+                <div class="momentum-container" style="width: 80%; margin: 8px auto 0;"><div class="momentum-fill" style="width:${mom2}%"></div></div>
             </div>
         </div>`;
 }
@@ -855,6 +870,7 @@ window.numpadWissen = function() { padInputString = padInputString.slice(0, -1);
 window.numpadDrukPref = function(val) { padInputString = val.toString(); document.getElementById('pad-screen').innerText = padInputString; };
 
 window.koppelMatchAanBord = async function(mId, boardId) {
+    await fetchLatestState();
     localStorage.setItem('myBoard', boardId);
     const m = state.matches.find(x => x.id === mId);
     m.board = boardId; m.status = 'bullen';
@@ -863,6 +879,7 @@ window.koppelMatchAanBord = async function(mId, boardId) {
 };
 
 window.sluitTabletEnFinishMatch = async function(mId) {
+    await fetchLatestState();
     const actM = state.matches.find(x => x.id === mId);
     if (actM) {
         actM.status = 'finished';
@@ -874,6 +891,7 @@ window.sluitTabletEnFinishMatch = async function(mId) {
 
 window.annuleerLopendeMatch = async function(mId) {
     if(confirm("Partij definitief wissen? Stats vervallen.")) {
+        await fetchLatestState();
         const m = state.matches.find(x => x.id === mId);
         m.status = 'waiting'; m.board = null; m.legs1 = 0; m.legs2 = 0; m.score1 = 501; m.score2 = 501;
         m.dartsLeg1 = 0; m.dartsLeg2 = 0; m.scoreLeg1 = 0; m.scoreLeg2 = 0;
@@ -885,6 +903,7 @@ window.annuleerLopendeMatch = async function(mId) {
 }
 
 window.bevestigBullenWinnaar = async function(mId, pNum) {
+    await fetchLatestState();
     const m = state.matches.find(x => x.id === mId);
     const winNaam = pNum === 1 ? m.p1 : m.p2;
     state.stats[winNaam].bullsWon++;
@@ -906,14 +925,13 @@ window.sluitTablet = function() {
     render(); 
 }
 
-// --- NIEUW: UNDO FUNCTIE ---
 window.undoScore = async function(mId) {
+    await fetchLatestState();
     const m = state.matches.find(x => x.id === mId);
     if (m && m.history && m.history.length > 0) {
         let snap = m.history.pop();
         let keptHistory = m.history;
         
-        // Annuleer een automatische match-afsluiting mocht die aan het lopen zijn
         if (window.finishTimeouts && window.finishTimeouts[mId]) {
             clearTimeout(window.finishTimeouts[mId]);
             delete window.finishTimeouts[mId];
@@ -938,8 +956,12 @@ window.undoScore = async function(mId) {
 window.verwerkIngevuldeScore = async function(mId) {
     let score = parseInt(padInputString) || 0;
     padInputString = ""; 
+    let padEl = document.getElementById('pad-screen');
+    if(padEl) padEl.innerText = "0";
+    
     if (score < 0 || score > 180) { alert("Ongeldig (0-180)!"); return; }
 
+    await fetchLatestState(); // ANTI-DATABOTSING
     const m = state.matches.find(x => x.id === mId);
     const oldScore = m.turn === 1 ? m.score1 : m.score2;
     let newScore = oldScore - score;
@@ -984,26 +1006,27 @@ window.verwerkIngevuldeScore = async function(mId) {
 }
 
 window.bevestigCheckoutDarts = async function(mId, score, totDarts, doubleDarts) {
+    hideModal();
+    await fetchLatestState(); // ANTI-DATABOTSING
     const m = state.matches.find(x => x.id === mId);
     const aP = m.turn === 1 ? m.p1 : m.p2;
     state.stats[aP].doubleAttempts += doubleDarts;
     state.stats[aP].doubleHits += 1;
-    hideModal();
     await voerScoreTransactieUit(m, score, totDarts, true);
 }
 
 window.bevestigDartsEnRekenUit = async function(mId, score, doubleDarts, isHit) {
+    hideModal();
+    await fetchLatestState(); // ANTI-DATABOTSING
     const m = state.matches.find(x => x.id === mId);
     const aP = m.turn === 1 ? m.p1 : m.p2;
     state.stats[aP].doubleAttempts += doubleDarts;
     if(isHit) state.stats[aP].doubleHits += 1;
-    hideModal();
     await voerScoreTransactieUit(m, score, isHit ? doubleDarts : 3, isHit);
 }
 
 async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
     
-    // --- SNAPSHOT VOOR DE UNDO FUNCTIE ---
     if (!m.history) m.history = [];
     let matchCopy = { ...m };
     delete matchCopy.history; 
@@ -1016,7 +1039,6 @@ async function voerScoreTransactieUit(m, score, specDarts, isCheckout) {
         completedMatches: JSON.parse(JSON.stringify(state.completedMatches))
     });
     if (m.history.length > 5) m.history.shift(); 
-    // ------------------------------------
 
     const scStr = m.turn === 1 ? 'score1' : 'score2';
     const dtLegStr = m.turn === 1 ? 'dartsLeg1' : 'dartsLeg2';
